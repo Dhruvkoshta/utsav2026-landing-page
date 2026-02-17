@@ -1,25 +1,97 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import HeroSection from './components/HeroSection';
 
-function App() {
+const App: React.FC = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+    document.body.style.overflow = !isMenuOpen ? 'hidden' : 'unset';
+  };
+
+  const menuItems = ['EVENTS', 'GALLERY', 'TICKETS'];
+
   return (
     // Main wrapper with the dark cultural background color
-    <main className="w-full min-h-screen bg-fest-bg text-fest-text selection:bg-fest-accent selection:text-fest-bg">
+    <main className="w-full min-h-screen bg-fest-bg text-fest-text selection:bg-fest-accent selection:text-fest-bg overflow-x-hidden">
       
       {/* Navigation Placeholder (Optional) */}
       <nav className="absolute top-0 left-0 w-full p-6 z-50 flex justify-between items-center mix-blend-difference pointer-events-none">
-        <div className="font-bold tracking-widest text-sm pointer-events-auto cursor-pointer">
+        <div className="font-bold tracking-widest text-sm pointer-events-auto cursor-pointer z-[70]">
           UT.2025
         </div>
+        
+        {/* Desktop Menu */}
         <div className="hidden md:flex gap-8 text-xs font-medium tracking-widest pointer-events-auto">
           <button className="hover:text-fest-primary transition-colors">EVENTS</button>
           <button className="hover:text-fest-primary transition-colors">GALLERY</button>
           <button className="hover:text-fest-primary transition-colors">TICKETS</button>
         </div>
+
+        {/* Mobile Menu Trigger (Hamburger) */}
+        <div className="md:hidden pointer-events-auto z-[70]">
+           <button 
+            onClick={toggleMenu} 
+            className={`flex flex-col gap-1.5 p-2 focus:outline-none transition-opacity duration-300 ${isMenuOpen ? 'opacity-0' : 'opacity-100'}`}
+          >
+            <div className="w-6 h-0.5 bg-fest-text mb-1.5"></div>
+            <div className="w-6 h-0.5 bg-fest-text"></div>
+          </button>
+        </div>
       </nav>
 
+      {/* --- MOBILE MENU OVERLAY --- */}
+      <div 
+        className={`fixed inset-0 bg-fest-bg z-[60] flex flex-col items-center justify-center transition-all duration-500 md:hidden ${
+          isMenuOpen ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-10 pointer-events-none'
+        }`}
+      >
+        {/* BACK BUTTON (Styled like UT.2025) */}
+        <button 
+          onClick={toggleMenu}
+          className="absolute top-8 left-6 flex items-center gap-3 text-sm font-bold tracking-widest text-fest-text/70 hover:text-fest-primary transition-colors group"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            strokeWidth={2} 
+            stroke="currentColor" 
+            className="w-4 h-4 transition-transform group-hover:-translate-x-1"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+          </svg>
+          BACK
+        </button>
+
+        {/* Menu Items (Styled like UT.2025) */}
+        <nav className="flex flex-col items-center gap-10">
+          {menuItems.map((item, i) => (
+            <button 
+              key={item}
+              onClick={toggleMenu}
+              className={`text-2xl font-bold tracking-widest hover:text-fest-primary transition-all duration-500 transform ${
+                isMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
+              }`}
+              style={{ transitionDelay: `${i * 100}ms` }}
+            >
+              {item}
+            </button>
+          ))}
+        </nav>
+      </div>
+
       {/* The Immersive Hero Section */}
-      <HeroSection />
+      <HeroSection isMobile={isMobile} />
 
       {/* Content Placeholder (To demonstrate scrolling) */}
       <section className="w-full py-20 px-8 flex flex-col items-center justify-center min-h-[50vh] bg-fest-bg/95 relative z-10">
