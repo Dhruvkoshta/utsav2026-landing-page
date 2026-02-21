@@ -2,13 +2,13 @@ import React, { Suspense, useMemo, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { motion } from 'framer-motion';
 import { ParticleText } from './ParticleText';
-import { CosmicBackground } from './CosmicBackground'; 
 
 interface HeroProps {
   isMobile: boolean;
+  startAnimation: boolean; // Prop added to listen to App.tsx
 }
 
-const HeroSection: React.FC<HeroProps> = ({ isMobile }) => {
+const HeroSection: React.FC<HeroProps> = ({ isMobile, startAnimation }) => {
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1000);
 
   useEffect(() => {
@@ -27,10 +27,9 @@ const HeroSection: React.FC<HeroProps> = ({ isMobile }) => {
   }, [isMobile, windowWidth]);
 
   return (
-    <section className="relative w-full h-screen flex flex-col items-center justify-center overflow-hidden bg-[#0f0510]">
+    /* bg-transparent ensures the CosmicBackground in App.tsx is visible */
+    <section className="relative w-full h-screen flex flex-col items-center justify-center overflow-hidden bg-transparent">
       
-      <CosmicBackground />
-
       <div className="absolute inset-0 z-10 w-full h-full">
         <Canvas 
           camera={{ position: [0, 0, 10], fov: 45 }} 
@@ -38,39 +37,43 @@ const HeroSection: React.FC<HeroProps> = ({ isMobile }) => {
         >
           <Suspense fallback={null}>
             
-            {isMobile ? (
-              // --- MOBILE LAYOUT ---
-              <group scale={[responsiveScale, responsiveScale, responsiveScale]}>
-                
-                {/* UTSAV */}
-                <group position={[0, 0.8, 0]}>
+            {/* The 3D text only renders/swarms when startAnimation is true */}
+            {startAnimation && (
+              isMobile ? (
+                // --- MOBILE LAYOUT ---
+                <group scale={[responsiveScale, responsiveScale, responsiveScale]}>
+                  
+                  {/* UTSAV */}
+                  <group position={[0, 0.8, 0]}>
+                    <ParticleText 
+                      text="UTSAV" 
+                      size={1} 
+                      density={280} 
+                      startAnimation={true}
+                    />
+                  </group>
+                  
+                  {/* TRAYANA */}
+                  <group position={[0, -0.8, 0]}>
+                    <ParticleText 
+                      text="TRAYANA" 
+                      size={1} 
+                      density={280} 
+                      startAnimation={true}
+                    />
+                  </group>
+                </group>
+              ) : (
+                // --- DESKTOP LAYOUT ---
+                <group scale={[1, 1, 1]}>
                   <ParticleText 
-                    text="UTSAV" 
-                    size={1} 
-                    // REDUCED DENSITY: Dropped from 450 -> 280 to fix the "all white" look
-                    density={280} 
+                    text="UTSAV TRAYANA" 
+                    size={1.2} 
+                    density={1500} 
+                    startAnimation={true}
                   />
                 </group>
-                
-                {/* TRAYANA */}
-                <group position={[0, -0.8, 0]}>
-                  <ParticleText 
-                    text="TRAYANA" 
-                    size={1} 
-                    // REDUCED DENSITY: Dropped from 450 -> 280
-                    density={280} 
-                  />
-                </group>
-              </group>
-            ) : (
-              // --- DESKTOP LAYOUT (Unchanged) ---
-              <group scale={[1, 1, 1]}>
-                <ParticleText 
-                  text="UTSAV TRAYANA" 
-                  size={1.2} 
-                  density={1500} 
-                />
-              </group>
+              )
             )}
             
             <fog attach="fog" args={['#0f0510', 5, 25]} />

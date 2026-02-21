@@ -250,8 +250,12 @@ export const ParticleText: React.FC<ParticleTextProps> = ({
     const material = new THREE.MeshBasicMaterial();
     const mesh = new THREE.Mesh(geometry, material);
     const sampler = new MeshSurfaceSampler(mesh).build();
-    
-    const count = Math.floor(density * text.length); 
+
+    // Detect if we are on a mobile device (screen width < 768px)
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    // Cut the particle count to 35% on mobile devices to save the CPU
+    const activeDensity = isMobile ? density * 0.35 : density;
+    const count = Math.floor(activeDensity * text.length);
     
     const startPositions = new Float32Array(count * 3);
     const endPositions = new Float32Array(count * 3);
@@ -270,14 +274,22 @@ export const ParticleText: React.FC<ParticleTextProps> = ({
       endPositions[i * 3 + 2] = tempPosition.z;
 
       // Calculate relative X (0.0 = Leftmost letter, 1.0 = Rightmost letter)
-      const relativeX = (tempPosition.x - minX) / totalWidth;
-      mixFactors[i] = relativeX;
+      // const relativeX = (tempPosition.x - minX) / totalWidth;
+      mixFactors[i] = Math.random();
 
+      // Sweep effect (Commented out, but preserved for your reference)
       // 2. START POSITION (Off-screen Left)
       // We spawn them ~30 units to the left of the text's start
-      startPositions[i * 3] = minX - 35 - (Math.random() * 15); 
-      startPositions[i * 3 + 1] = (Math.random() - 0.5) * 10;   
-      startPositions[i * 3 + 2] = (Math.random() - 0.5) * 5;    
+      // startPositions[i * 3] = minX - 35 - (Math.random() * 15); 
+      // startPositions[i * 3 + 1] = (Math.random() - 0.5) * 10;   
+      // startPositions[i * 3 + 2] = (Math.random() - 0.5) * 5;
+
+      // Swarm effect
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 30 + Math.random() * 30;
+      startPositions[i*3] = Math.cos(angle) * distance;
+      startPositions[i*3 + 1] = Math.sin(angle) * distance;
+      startPositions[i*3 + 2] = (Math.random() - 0.5) * 40;
 
       // 3. COLORS
       const color = themeColors[Math.floor(Math.random() * themeColors.length)];
@@ -299,13 +311,15 @@ export const ParticleText: React.FC<ParticleTextProps> = ({
   }, [font, text, size, density]);
 
   useLayoutEffect(() => {
-    const tl = gsap.timeline({ delay: 0.5 });
+    // MICRO-DELAY FIX: 0.1s gives the DOM time to clean up the 2D intro
+    // before locking the thread with WebGL calculations, preventing stutter.
+    const tl = gsap.timeline({ delay: 0.1 });
     
     // Animate global progress 0 -> 1
     tl.to(progressRef.current, {
       value: 1,
-      duration: 3.5, 
-      ease: "power2.out",
+      duration: 6.0, 
+      ease: "power3.out", // Changed to power3.out for a more elegant deceleration
     });
 
     return () => { tl.kill(); };
@@ -314,46 +328,54 @@ export const ParticleText: React.FC<ParticleTextProps> = ({
   useFrame(({ clock }) => {
     if (!pointsRef.current) return;
 
+    const globalProgress = progressRef.current.value;
+    
+    // OPTIMIZATION 3: THE SLEEP HACK
+    // If the animation is 100% finished, exit the loop completely. 
+    // This stops the phone from melting after the text has formed!
+    if (globalProgress >= 1) return; 
+
     const time = clock.getElapsedTime();
+    const timeBase = time * 15; // Cache time multiplier
+    
     const geometry = pointsRef.current.geometry;
     const positionAttr = geometry.attributes.position as THREE.BufferAttribute;
     const posArr = positionAttr.array as Float32Array;
 
     const { start, end, mixFactors, speeds } = particleData;
-    const globalProgress = progressRef.current.value;
 
     for (let i = 0; i < mixFactors.length; i++) {
-      // Delay logic: Right-side particles wait longer
-      const threshold = mixFactors[i] * 0.6; // Max delay is 0.6 of the timeline
-      // Map global progress to local particle progress
-      let localProgress = (globalProgress - threshold) / (1 - 0.6);
+      // TIMING WINDOW FIX: Changed from 0.6 to 0.5. 
+      // This means particles spend more of their time physically moving rather than waiting to start.
+      const threshold = mixFactors[i] * 0.5; 
+      let localProgress = (globalProgress - threshold) / (1 - 0.5);
       
-      // Clamp
-      localProgress = Math.max(0, Math.min(1, localProgress));
-      
-      // Ease Out Cubic
-      const eased = 1 - Math.pow(1 - localProgress, 3);
-
       if (localProgress <= 0) {
-        // Stick to start
         posArr[i * 3] = start[i * 3];
         posArr[i * 3 + 1] = start[i * 3 + 1];
         posArr[i * 3 + 2] = start[i * 3 + 2];
-      } else if (localProgress >= 1) {
-        // Snap to end
+        continue; // Skip the rest of the math for this particle
+      } 
+      
+      if (localProgress >= 1) {
         posArr[i * 3] = end[i * 3];
         posArr[i * 3 + 1] = end[i * 3 + 1];
         posArr[i * 3 + 2] = end[i * 3 + 2];
-      } else {
-        // Interpolate with Turbulence (Fire Effect)
-        // (1 - eased) makes the turbulence stop as it settles
-        const turbulence = Math.sin(time * 15 * speeds[i] + i) * (1 - eased);
-        
-        posArr[i * 3] = THREE.MathUtils.lerp(start[i * 3], end[i * 3], eased);
-        // Add vertical wave
-        posArr[i * 3 + 1] = THREE.MathUtils.lerp(start[i * 3 + 1], end[i * 3 + 1], eased) + (turbulence * 1.5);
-        posArr[i * 3 + 2] = THREE.MathUtils.lerp(start[i * 3 + 2], end[i * 3 + 2], eased);
+        continue; // Skip the rest of the math for this particle
       }
+
+      // OPTIMIZATION 2: FASTER EXPONENTS
+      // Instead of Math.pow(1 - localProgress, 3), we do raw multiplication
+      const inv = 1 - localProgress;
+      const eased = 1 - (inv * inv * inv);
+
+      const turbulence = Math.sin(timeBase * speeds[i] + i) * (1 - eased);
+      
+      // OPTIMIZATION 1: INLINED LERP MATH
+      // Raw math is significantly faster than calling THREE.MathUtils.lerp()
+      posArr[i * 3] = start[i * 3] + (end[i * 3] - start[i * 3]) * eased;
+      posArr[i * 3 + 1] = (start[i * 3 + 1] + (end[i * 3 + 1] - start[i * 3 + 1]) * eased) + (turbulence * 1.5);
+      posArr[i * 3 + 2] = start[i * 3 + 2] + (end[i * 3 + 2] - start[i * 3 + 2]) * eased;
     }
     
     positionAttr.needsUpdate = true;
