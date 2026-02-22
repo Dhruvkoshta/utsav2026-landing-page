@@ -1,12 +1,35 @@
 import React, { Suspense, useMemo, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { motion } from 'framer-motion';
-import { ParticleText } from './ParticleText';
+import * as THREE from 'three';
 
 interface HeroProps {
   isMobile: boolean;
-  startAnimation: boolean; // Prop added to listen to App.tsx
+  startAnimation: boolean; 
 }
+
+const PersistentLogo = () => {
+  const curve = useMemo(() => {
+    const pts = [];
+    const INF_WIDTH = 5.4; 
+    const INF_DEPTH = 2.4;
+    const HEIGHT = 1.65; 
+    
+    for (let i = 0; i < 100; i++) {
+      const t = (i / 100) * Math.PI * 2 + 0.15;
+      const yElevated = HEIGHT + Math.cos(t) * 0.15;
+      pts.push(new THREE.Vector3(INF_WIDTH * Math.sin(t), yElevated, INF_DEPTH * Math.sin(2 * t)));
+    }
+    return new THREE.CatmullRomCurve3(pts, true);
+  }, []);
+
+  return (
+    <mesh>
+      <tubeGeometry args={[curve, 400, 0.08, 16, true]} />
+      <meshBasicMaterial color="#FDE08B" toneMapped={false} depthWrite={false} transparent={true} opacity={1} />
+    </mesh>
+  );
+};
 
 const HeroSection: React.FC<HeroProps> = ({ isMobile, startAnimation }) => {
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1000);
@@ -17,66 +40,32 @@ const HeroSection: React.FC<HeroProps> = ({ isMobile, startAnimation }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // "BULLETPROOF FIT" LOGIC:
   const responsiveScale = useMemo(() => {
     if (isMobile) {
        const rawScale = windowWidth / 1000;
-       return Math.max(0.25, Math.min(rawScale, 0.50));
+       return Math.max(0.40, Math.min(rawScale, 0.60));
     }
     return 1;
   }, [isMobile, windowWidth]);
 
   return (
-    /* bg-transparent ensures the CosmicBackground in App.tsx is visible */
-    <section className="relative w-full h-screen flex flex-col items-center justify-center overflow-hidden bg-transparent">
+    <section className="relative w-full h-[100dvh] flex flex-col items-center justify-center overflow-hidden bg-transparent">
       
-      <div className="absolute inset-0 z-10 w-full h-full">
+      <div className="absolute inset-0 z-10 w-full h-full pointer-events-none">
+        {/* OPTIMIZATION: Applied high-performance gl preset and capped dpr to match the Intro precisely */}
         <Canvas 
-          camera={{ position: [0, 0, 10], fov: 45 }} 
-          dpr={isMobile ? 1 : [1, 2]} 
+          gl={{ powerPreference: "high-performance" }}
+          dpr={[1, 1.5]}
+          camera={{ position: [0, 22, 0.1], fov: isMobile ? 55 : 40 }} 
+          onCreated={({ camera }) => {
+            camera.lookAt(0, 0, 0); 
+          }}
         >
           <Suspense fallback={null}>
-            
-            {/* The 3D text only renders/swarms when startAnimation is true */}
-            {startAnimation && (
-              isMobile ? (
-                // --- MOBILE LAYOUT ---
-                <group scale={[responsiveScale, responsiveScale, responsiveScale]}>
-                  
-                  {/* UTSAV */}
-                  <group position={[0, 0.8, 0]}>
-                    <ParticleText 
-                      text="UTSAV" 
-                      size={1} 
-                      density={280} 
-                      startAnimation={true}
-                    />
-                  </group>
-                  
-                  {/* TRAYANA */}
-                  <group position={[0, -0.8, 0]}>
-                    <ParticleText 
-                      text="TRAYANA" 
-                      size={1} 
-                      density={280} 
-                      startAnimation={true}
-                    />
-                  </group>
-                </group>
-              ) : (
-                // --- DESKTOP LAYOUT ---
-                <group scale={[1, 1, 1]}>
-                  <ParticleText 
-                    text="UTSAV TRAYANA" 
-                    size={1.2} 
-                    density={1500} 
-                    startAnimation={true}
-                  />
-                </group>
-              )
-            )}
-            
-            <fog attach="fog" args={['#0f0510', 5, 25]} />
+            <group scale={[responsiveScale, responsiveScale, responsiveScale]}>
+              <PersistentLogo />
+            </group>
+            <fog attach="fog" args={['#0f0510', 15, 45]} />
           </Suspense>
         </Canvas>
       </div>
@@ -86,21 +75,25 @@ const HeroSection: React.FC<HeroProps> = ({ isMobile, startAnimation }) => {
 
         <motion.div
           initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={{ delay: 3.5, duration: 1.5, ease: "easeOut" }}
+          animate={startAnimation ? { opacity: 1, y: 0, filter: "blur(0px)" } : {}}
+          transition={{ duration: 0.8, ease: "easeOut" }}
           className="flex flex-col items-center"
         >
-          <h2 className="text-fest-secondary font-light tracking-[0.2em] md:tracking-[0.5em] uppercase text-xs md:text-lg lg:text-xl drop-shadow-lg shadow-black">
+          <h2 className="text-[#FDE08B] font-light tracking-[0.2em] md:tracking-[0.5em] uppercase text-xs md:text-lg lg:text-xl drop-shadow-lg shadow-black">
             Echoes of Every Path
           </h2>
-          <div className="mt-6 h-px w-16 md:w-24 bg-gradient-to-r from-transparent via-fest-accent to-transparent opacity-70" />
+          <div className="mt-6 h-px w-16 md:w-24 bg-gradient-to-r from-transparent via-[#C69A4C] to-transparent opacity-70" />
         </motion.div>
       </div>
 
       <motion.div 
-        className="absolute bottom-8 z-20 text-white/30 mix-blend-screen"
-        animate={{ y: [0, 10, 0], opacity: [0.3, 0.6, 0.3] }}
-        transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute bottom-8 z-20 text-white/30 mix-blend-screen pointer-events-none"
+        initial={{ opacity: 0 }}
+        animate={startAnimation ? { y: [0, 10, 0], opacity: [0.3, 0.6, 0.3] } : {}}
+        transition={{ 
+          opacity: { duration: 1.0 },
+          y: { duration: 2.5, repeat: Infinity, ease: "easeInOut" }
+        }}
       >
         <span className="text-sm uppercase tracking-widest text-[10px]">Scroll to Explore</span>
         <div className="w-px h-8 bg-white mx-auto mt-2 opacity-50"></div>
