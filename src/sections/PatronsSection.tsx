@@ -1,55 +1,7 @@
 import { motion } from 'framer-motion'
 import ShinyText from '../components/ShinyText'
-
-/* ── Animation presets ────────────────────────────────────────────────────── */
-
-const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 32 } as const,
-  whileInView: { opacity: 1, y: 0 } as const,
-  viewport: { once: true, amount: 0.2 } as const,
-  transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] as [number, number, number, number], delay },
-})
-
-const hoverLift = {
-  whileHover: { y: -4, transition: { duration: 0.35, ease: 'easeOut' as const } },
-}
-
-/* ── Glass card (matching ThemeAboutSection) ───────────────────────────────── */
-
-function GlassCard({
-  children,
-  className = '',
-  delay = 0,
-}: {
-  children: React.ReactNode
-  className?: string
-  delay?: number
-}) {
-  return (
-    <motion.article
-      {...fadeUp(delay)}
-      {...hoverLift}
-      className={`
-        relative overflow-hidden rounded-[1.75rem]
-        border border-white/10
-        bg-white/[0.03]
-        shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(255,255,255,0.04),0_32px_72px_-28px_rgba(0,0,0,0.7)]
-        backdrop-blur-xl
-        transition-all duration-500
-        hover:bg-white/[0.05]
-        hover:border-white/15
-        hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(255,255,255,0.06),0_36px_80px_-24px_rgba(0,0,0,0.8)]
-        ${className}
-      `}
-    >
-      {/* Refraction highlight — top edge */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/25 to-transparent" />
-      {/* Refraction highlight — left edge */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-px bg-linear-to-b from-transparent via-white/15 to-transparent" />
-      {children}
-    </motion.article>
-  )
-}
+import { fadeUp } from '../components/animations'
+import { GlassCard } from '../components/GlassCard'
 
 /* ── Patron card ──────────────────────────────────────────────────────────── */
 
@@ -85,7 +37,7 @@ function SectionTitle({ text, delay = 0 }: { text: string; delay?: number }) {
   return (
     <motion.h3
       {...fadeUp(delay)}
-      className="mb-8 text-center font-playfair text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-200 via-gray-400 to-gray-600 drop-shadow-[0_0_15px_rgba(147,51,234,0.3)] sm:text-5xl"
+      className="mb-8 text-center font-cinzel text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-200 via-gray-400 to-gray-600 drop-shadow-[0_0_15px_rgba(147,51,234,0.3)] sm:text-5xl"
     >
       <ShinyText
         text={text}

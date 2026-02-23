@@ -5,6 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+  --font-cinzel: "Cinzel", "Playfair Display", Georgia, serif;
   --font-playfair: "Playfair Display", Georgia, serif;
   --font-inter: "Inter", system-ui, sans-serif;
 }
@@ -149,4 +150,27 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Explore Events button — CSS hover instead of JS handlers */
+.explore-events-btn {
+  margin-top: 3.5rem;
+  padding: 1rem 3rem;
+  background: transparent;
+  border: 1px solid rgba(222, 91, 234, 0.5);
+  color: #fff;
+  font-family: "Inter", sans-serif;
+  font-size: clamp(0.7rem, 1.2vw, 0.8rem);
+  font-weight: 400;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  transition: all 0.4s ease;
+  backdrop-filter: blur(5px);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.explore-events-btn:hover {
+  background-color: rgba(222, 91, 234, 0.1);
+  border-color: rgba(222, 91, 234, 1);
+  box-shadow: 0 0 20px rgba(222, 91, 234, 0.2);
 }

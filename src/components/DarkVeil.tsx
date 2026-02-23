@@ -87,9 +87,9 @@ export default function DarkVeil({
   hueShift = 0,
   noiseIntensity = 0,
   scanlineIntensity = 0,
-  speed = 0.5,
+  speed = 1,
   scanlineFrequency = 0,
-  warpAmount = 0,
+  warpAmount = 2,
   resolutionScale = 1
 }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -133,8 +133,17 @@ export default function DarkVeil({
 
     const start = performance.now();
     let frame = 0;
+    let frameCount = 0;
+    let visible = !document.hidden;
+
+    // Pause rendering when tab is not visible
+    const handleVisibility = () => { visible = !document.hidden; };
+    document.addEventListener('visibilitychange', handleVisibility);
 
     const loop = () => {
+      frame = requestAnimationFrame(loop);
+      // Skip every other frame (30fps is plenty for this slow abstract shader)
+      if (!visible || ++frameCount % 2 !== 0) return;
       program.uniforms.uTime.value = ((performance.now() - start) / 1000) * speed;
       program.uniforms.uHueShift.value = hueShift;
       program.uniforms.uNoise.value = noiseIntensity;
@@ -142,13 +151,13 @@ export default function DarkVeil({
       program.uniforms.uScanFreq.value = scanlineFrequency;
       program.uniforms.uWarp.value = warpAmount;
       renderer.render({ scene: mesh });
-      frame = requestAnimationFrame(loop);
     };
 
     loop();
 
     return () => {
       cancelAnimationFrame(frame);
+      document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('resize', resize);
     };
   }, [hueShift, noiseIntensity, scanlineIntensity, speed, scanlineFrequency, warpAmount, resolutionScale]);

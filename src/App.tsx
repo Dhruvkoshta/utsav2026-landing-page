@@ -1,19 +1,19 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, lazy, Suspense } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import HeroSection from './sections/HeroSection'
 import LogoSection from './sections/LogoSection'
 import CountdownSection from './sections/CountdownSection'
-import ThemeAboutSection from './sections/ThemeAboutSection'
-import GallerySection from './sections/GallerySection'
-import SponsorsSection from './sections/SponsorsSection'
-import PatronsSection from './sections/PatronsSection'
-import ContactSection from './sections/ContactSection'
-import FooterSection from './sections/FooterSection'
 import DarkVeil from './components/DarkVeil'
 import './index.css'
 
-gsap.registerPlugin(ScrollTrigger)
+// Lazy-load below-fold sections to reduce initial bundle size
+const ThemeAboutSection = lazy(() => import('./sections/ThemeAboutSection'))
+const GallerySection    = lazy(() => import('./sections/GallerySection'))
+const SponsorsSection   = lazy(() => import('./sections/SponsorsSection'))
+const PatronsSection    = lazy(() => import('./sections/PatronsSection'))
+const ContactSection    = lazy(() => import('./sections/ContactSection'))
+const FooterSection     = lazy(() => import('./sections/FooterSection'))
 
 export default function App() {
   const heroRef      = useRef<HTMLElement>(null)
@@ -71,12 +71,14 @@ export default function App() {
         <LogoSection onAnimationComplete={() => setLoaded(true)} />
         <HeroSection sectionRef={heroRef} nextSectionRef={countdownRef} />
         <CountdownSection sectionRef={countdownRef} />
-        <ThemeAboutSection />
-        <GallerySection />
-        <SponsorsSection />
-        <PatronsSection />
-        <ContactSection />
-        <FooterSection />
+        <Suspense fallback={null}>
+          <ThemeAboutSection />
+          <GallerySection />
+          <SponsorsSection />
+          <PatronsSection />
+          <ContactSection />
+          <FooterSection />
+        </Suspense>
       </div>
     </div>
   )

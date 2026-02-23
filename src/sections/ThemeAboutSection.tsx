@@ -1,55 +1,7 @@
 import { motion } from 'framer-motion'
 import ShinyText from '../components/ShinyText'
-
-/* ── Shared animation presets ─────────────────────────────────────────────── */
-
-const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 32 } as const,
-  whileInView: { opacity: 1, y: 0 } as const,
-  viewport: { once: true, amount: 0.2 } as const,
-  transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] as [number, number, number, number], delay },
-})
-
-const hoverLift = {
-  whileHover: { y: -5, transition: { duration: 0.35, ease: 'easeOut' as const } },
-}
-
-/* ── Liquid-glass card wrapper ────────────────────────────────────────────── */
-
-function GlassCard({
-  children,
-  className = '',
-  delay = 0,
-}: {
-  children: React.ReactNode
-  className?: string
-  delay?: number
-}) {
-  return (
-    <motion.article
-      {...fadeUp(delay)}
-      {...hoverLift}
-      className={`
-        relative overflow-hidden rounded-[1.75rem]
-        border border-white/10
-        bg-white/[0.03]
-        shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(255,255,255,0.04),0_32px_72px_-28px_rgba(0,0,0,0.7)]
-        backdrop-blur-xl
-        transition-all duration-500
-        hover:bg-white/[0.05]
-        hover:border-white/15
-        hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(255,255,255,0.06),0_36px_80px_-24px_rgba(0,0,0,0.8)]
-        ${className}
-      `}
-    >
-      {/* Refraction highlight — top edge */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/25 to-transparent" />
-      {/* Refraction highlight — left edge */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-px bg-linear-to-b from-transparent via-white/15 to-transparent" />
-      {children}
-    </motion.article>
-  )
-}
+import { fadeUp } from '../components/animations'
+import { GlassCard } from '../components/GlassCard'
 
 /* ── Section ──────────────────────────────────────────────────────────────── */
 
@@ -85,9 +37,16 @@ export default function ThemeAboutSection() {
             <motion.h2
               {...fadeUp(0.15)}
               id="theme-heading"
-              className="relative mb-6 font-playfair text-3xl font-semibold italic leading-tight text-white sm:text-4xl"
+              className="relative mb-6 font-cinzel text-3xl font-bold leading-tight text-transparent bg-clip-text bg-gradient-to-r from-gray-200 via-gray-400 to-gray-600 drop-shadow-[0_0_15px_rgba(147,51,234,0.3)] sm:text-4xl"
             >
-              Theme
+              <ShinyText
+                text="Theme"
+                speed={4}
+                color="rgba(209,213,219,0.8)"
+                shineColor="#ffffff"
+                spread={120}
+                yoyo
+              />
             </motion.h2>
 
             {/* Decorative accent line */}
@@ -142,8 +101,16 @@ export default function ThemeAboutSection() {
                     delay={0.5}
                   />
                 </p>
-                <h3 className="font-playfair text-[1.85rem] font-semibold leading-tight text-white sm:text-3xl">
-                  About Us
+                <h3 className="font-cinzel text-[1.85rem] font-bold leading-tight text-transparent bg-clip-text bg-gradient-to-r from-gray-200 via-gray-400 to-gray-600 drop-shadow-[0_0_15px_rgba(147,51,234,0.3)] sm:text-3xl">
+                  <ShinyText
+                    text="About Us"
+                    speed={4}
+                    color="rgba(209,213,219,0.8)"
+                    shineColor="#ffffff"
+                    spread={120}
+                    yoyo
+                    delay={0.5}
+                  />
                 </h3>
               </div>
             </motion.div>

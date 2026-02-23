@@ -25,6 +25,7 @@ export default function HeroSection({ sectionRef, nextSectionRef }: HeroSectionP
         loop
         muted
         playsInline
+        poster="/hero-poster.webp"
         style={{
           position: 'absolute',
           inset: 0,
@@ -127,11 +128,10 @@ export default function HeroSection({ sectionRef, nextSectionRef }: HeroSectionP
           transition={{ ...baseTransition, duration: 0.9, delay: 1.1 }}
           style={{
             margin: 0,
-            fontFamily: '"Playfair Display", Georgia, serif',
-            fontWeight: 400,
-            fontStyle: 'italic',
+            fontFamily: '"Cinzel", "Playfair Display", Georgia, serif',
+            fontWeight: 600,
             fontSize: 'clamp(1.6rem, 4vw, 3.5rem)',
-            letterSpacing: '0.02em',
+            letterSpacing: '0.06em',
             color: '#ffffff',
             lineHeight: 1.15,
           }}

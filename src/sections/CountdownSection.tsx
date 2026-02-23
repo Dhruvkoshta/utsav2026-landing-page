@@ -1,8 +1,6 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, memo } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-
-gsap.registerPlugin(ScrollTrigger)
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -36,7 +34,7 @@ interface RollProps {
 }
 
 /** Vertically rolls digit columns to the target value. */
-function RollNumber({ value, fontSize = 'clamp(5rem, 14vw, 10rem)' }: RollProps) {
+const RollNumber = memo(function RollNumber({ value, fontSize = 'clamp(5rem, 14vw, 10rem)' }: RollProps) {
   const digits = value.split('')
   return (
     <span style={{ display: 'inline-flex', gap: '0.04em' }}>
@@ -45,7 +43,7 @@ function RollNumber({ value, fontSize = 'clamp(5rem, 14vw, 10rem)' }: RollProps)
       ))}
     </span>
   )
-}
+})
 
 interface RollDigitProps {
   digit: string
@@ -128,20 +126,113 @@ interface UnitProps {
   label: string
 }
 
-function SubUnit({ value, label }: UnitProps) {
+const subUnitLabelStyle: React.CSSProperties = {
+  fontFamily: '"Inter", sans-serif',
+  fontWeight: 300,
+  fontSize: 'clamp(0.55rem, 1vw, 0.72rem)',
+  letterSpacing: '0.3em',
+  textTransform: 'uppercase',
+  color: 'rgba(222,91,234,0.65)',
+}
+
+const subUnitContainerStyle: React.CSSProperties = {
+  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem',
+}
+
+const SubUnit = memo(function SubUnit({ value, label }: UnitProps) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
+    <div style={subUnitContainerStyle}>
       <RollNumber value={pad(value)} fontSize='clamp(2rem, 5vw, 3.5rem)' />
-      <span style={{
-        fontFamily: '"Inter", sans-serif',
-        fontWeight: 300,
-        fontSize: 'clamp(0.55rem, 1vw, 0.72rem)',
-        letterSpacing: '0.3em',
-        textTransform: 'uppercase',
-        color: 'rgba(222,91,234,0.65)',
-      }}>{label}</span>
+      <span style={subUnitLabelStyle}>{label}</span>
     </div>
   )
+})
+
+// ── Hoisted styles ────────────────────────────────────────────────────────────
+
+const sectionStyle: React.CSSProperties = {
+  position: 'relative',
+  width: '100%',
+  minHeight: '100vh',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  overflow: 'hidden',
+  zIndex: 0,
+}
+
+const bgStyle: React.CSSProperties = {
+  position: 'absolute',
+  inset: '-10% 0',
+  backgroundImage: 'url(/wallhaven-yxy8zk_1920x1080.webp)',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+  zIndex: 0,
+}
+
+const overlayStyle: React.CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  background: 'linear-gradient(to bottom, rgba(7,5,10,0.72) 0%, rgba(7,5,10,0.55) 50%, rgba(7,5,10,0.8) 100%)',
+  zIndex: 2,
+  pointerEvents: 'none',
+}
+
+const contentStyle: React.CSSProperties = {
+  position: 'relative',
+  zIndex: 3,
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 0,
+  padding: '2rem 1.5rem',
+  textAlign: 'center',
+}
+
+const headlineStyle: React.CSSProperties = {
+  margin: '0 0 2.4rem 0',
+  fontFamily: '"Cinzel", "Playfair Display", serif',
+  fontWeight: 600,
+  fontSize: 'clamp(1rem, 2.4vw, 1.45rem)',
+  letterSpacing: '0.18em',
+  textTransform: 'uppercase',
+  color: 'rgba(255,255,255,0.72)',
+}
+
+const daysCounterStyle: React.CSSProperties = { lineHeight: 1, marginBottom: '0.5rem' }
+
+const daysLabelStyle: React.CSSProperties = {
+  margin: '0.9rem 0 2.8rem 0',
+  fontFamily: '"Inter", sans-serif',
+  fontWeight: 300,
+  fontSize: 'clamp(0.65rem, 1.3vw, 0.85rem)',
+  letterSpacing: '0.38em',
+  textTransform: 'uppercase',
+  color: 'rgba(222,91,234,0.75)',
+}
+
+const separatorStyle: React.CSSProperties = {
+  width: 'min(380px, 60vw)',
+  height: '1px',
+  background: 'linear-gradient(to right, transparent, rgba(222,91,234,0.4), transparent)',
+  marginBottom: '2.2rem',
+}
+
+const subRowStyle: React.CSSProperties = {
+  display: 'flex',
+  gap: 'clamp(1.5rem, 5vw, 4rem)',
+  alignItems: 'flex-end',
+}
+
+const dateHintStyle: React.CSSProperties = {
+  marginTop: '3rem',
+  fontFamily: '"Inter", sans-serif',
+  fontWeight: 300,
+  fontSize: 'clamp(0.58rem, 1vw, 0.7rem)',
+  letterSpacing: '0.25em',
+  textTransform: 'uppercase',
+  color: 'rgba(255,255,255,0.28)',
 }
 
 // ── Section ───────────────────────────────────────────────────────────────────
@@ -238,155 +329,47 @@ export default function CountdownSection({ sectionRef }: CountdownSectionProps) 
   return (
     <section
       ref={sectionRef}
-      style={{
-        position: 'relative',
-        width: '100%',
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-        zIndex: 0,
-      }}
+      style={sectionStyle}
     >
       {/* Wallpaper BG 1 */}
-      <div
-        ref={bg1Ref}
-        style={{
-          position: 'absolute',
-          inset: '-10% 0',
-          backgroundImage: 'url(/wallhaven-yxy8zk_1920x1080.webp)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          zIndex: 0,
-        }}
-      />
+      <div ref={bg1Ref} style={bgStyle} />
 
       {/* Dark overlay for legibility */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        background: 'linear-gradient(to bottom, rgba(7,5,10,0.72) 0%, rgba(7,5,10,0.55) 50%, rgba(7,5,10,0.8) 100%)',
-        zIndex: 2,
-        pointerEvents: 'none',
-      }} />
+      <div style={overlayStyle} />
 
       {/* Content wrapper */}
-      <div
-        ref={innerRef}
-        style={{
-          position: 'relative',
-          zIndex: 3,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 0,
-          padding: '2rem 1.5rem',
-          textAlign: 'center',
-        }}
-      >
+      <div ref={innerRef} style={contentStyle}>
         {/* Headline */}
-        <p
-          ref={headlineRef}
-          style={{
-            margin: '0 0 2.4rem 0',
-            fontFamily: '"Playfair Display", serif',
-            fontStyle: 'italic',
-            fontWeight: 400,
-            fontSize: 'clamp(1rem, 2.4vw, 1.45rem)',
-            letterSpacing: '0.06em',
-            color: 'rgba(255,255,255,0.72)',
-          }}
-        >
+        <p ref={headlineRef} style={headlineStyle}>
           Utsav · BMSCE · 2026
         </p>
 
         {/* Giant days counter */}
-        <div style={{ lineHeight: 1, marginBottom: '0.5rem' }}>
+        <div style={daysCounterStyle}>
           <RollNumber value={pad(displayDays, 3)} />
         </div>
 
         {/* "DAYS TO GO" label */}
-        <p
-          ref={daysLabelRef}
-          style={{
-            margin: '0.9rem 0 2.8rem 0',
-            fontFamily: '"Inter", sans-serif',
-            fontWeight: 300,
-            fontSize: 'clamp(0.65rem, 1.3vw, 0.85rem)',
-            letterSpacing: '0.38em',
-            textTransform: 'uppercase',
-            color: 'rgba(222,91,234,0.75)',
-          }}
-        >
+        <p ref={daysLabelRef} style={daysLabelStyle}>
           Days to go
         </p>
 
         {/* Thin separator */}
-        <div style={{
-          width: 'min(380px, 60vw)',
-          height: '1px',
-          background: 'linear-gradient(to right, transparent, rgba(222,91,234,0.4), transparent)',
-          marginBottom: '2.2rem',
-        }} />
+        <div style={separatorStyle} />
 
         {/* Hours / Minutes / Seconds row */}
-        <div
-          ref={subRowRef}
-          style={{
-            display: 'flex',
-            gap: 'clamp(1.5rem, 5vw, 4rem)',
-            alignItems: 'flex-end',
-          }}
-        >
+        <div ref={subRowRef} style={subRowStyle}>
           <SubUnit value={time.hours}   label="Hours"   />
           <SubUnit value={time.minutes} label="Minutes" />
           <SubUnit value={time.seconds} label="Seconds" />
         </div>
      
         {/* Event date hint */}
-        <p style={{
-          marginTop: '3rem',
-          fontFamily: '"Inter", sans-serif',
-          fontWeight: 300,
-          fontSize: 'clamp(0.58rem, 1vw, 0.7rem)',
-          letterSpacing: '0.25em',
-          textTransform: 'uppercase',
-          color: 'rgba(255,255,255,0.28)',
-        }}>
+        <p style={dateHintStyle}>
           October 1, 2026
         </p>
            {/* Explore Events Button */}
-        <button
-          style={{
-            marginTop: '3.5rem',
-            padding: '1rem 3rem',
-            background: 'transparent',
-            border: '1px solid rgba(222,91,234,0.5)',
-            color: '#fff',
-            fontFamily: '"Inter", sans-serif',
-            fontSize: 'clamp(0.7rem, 1.2vw, 0.8rem)',
-            fontWeight: 400,
-            letterSpacing: '0.25em',
-            textTransform: 'uppercase',
-            transition: 'all 0.4s ease',
-            backdropFilter: 'blur(5px)',
-            borderRadius: '2px',
-            cursor: 'pointer',
-            
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(222,91,234,0.1)';
-            e.currentTarget.style.borderColor = 'rgba(222,91,234,1)';
-            e.currentTarget.style.boxShadow = '0 0 20px rgba(222,91,234,0.2)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.borderColor = 'rgba(222,91,234,0.5)';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        >
+        <button className="explore-events-btn">
           Explore Events
         </button>
       </div>
