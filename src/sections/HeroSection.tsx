@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { motion } from 'framer-motion'
+import ShinyText from '../components/ShinyText'
 
 interface HeroSectionProps {
   sectionRef: React.RefObject<HTMLElement | null>
@@ -48,7 +49,6 @@ export default function HeroSection({ sectionRef, nextSectionRef }: HeroSectionP
         }}
       />
 
-      {/* Top-right text block: IIT Delhi + 1978 + subtitle */}
       <div
         style={{
           position: 'absolute',
@@ -136,7 +136,14 @@ export default function HeroSection({ sectionRef, nextSectionRef }: HeroSectionP
             lineHeight: 1.15,
           }}
         >
-          Let's continue the Legacy
+          <ShinyText
+            text="Let's continue the Legacy"
+            speed={3}
+            color="rgba(255,255,255,0.85)"
+            shineColor="#ffffff"
+            spread={100}
+            yoyo
+          />
         </motion.h1>
       </div>
 

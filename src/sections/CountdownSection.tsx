@@ -370,10 +370,11 @@ export default function CountdownSection({ sectionRef }: CountdownSectionProps) 
             fontWeight: 400,
             letterSpacing: '0.25em',
             textTransform: 'uppercase',
-            cursor: 'pointer',
             transition: 'all 0.4s ease',
             backdropFilter: 'blur(5px)',
             borderRadius: '2px',
+            cursor: 'pointer',
+            
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = 'rgba(222,91,234,0.1)';

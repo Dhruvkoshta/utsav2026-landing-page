@@ -1,9 +1,16 @@
 import { useRef, useEffect, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import HeroSection from './components/HeroSection'
-import LogoSection from './components/LogoSection'
-import CountdownSection from './components/CountdownSection'
+import HeroSection from './sections/HeroSection'
+import LogoSection from './sections/LogoSection'
+import CountdownSection from './sections/CountdownSection'
+import ThemeAboutSection from './sections/ThemeAboutSection'
+import GallerySection from './sections/GallerySection'
+import SponsorsSection from './sections/SponsorsSection'
+import PatronsSection from './sections/PatronsSection'
+import ContactSection from './sections/ContactSection'
+import FooterSection from './sections/FooterSection'
+import DarkVeil from './components/DarkVeil'
 import './index.css'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -48,9 +55,29 @@ export default function App() {
 
   return (
     <div style={{ background: '#07050a' }}>
-      <LogoSection onAnimationComplete={() => setLoaded(true)} />
-      <HeroSection sectionRef={heroRef} nextSectionRef={countdownRef} />
-      <CountdownSection sectionRef={countdownRef} />
+      {/* Fixed DarkVeil background behind all sections */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        <DarkVeil
+          hueShift={340}
+          noiseIntensity={0}
+          scanlineIntensity={0}
+          speed={0.5}
+          scanlineFrequency={0}
+          warpAmount={0}
+        />
+      </div>
+
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <LogoSection onAnimationComplete={() => setLoaded(true)} />
+        <HeroSection sectionRef={heroRef} nextSectionRef={countdownRef} />
+        <CountdownSection sectionRef={countdownRef} />
+        <ThemeAboutSection />
+        <GallerySection />
+        <SponsorsSection />
+        <PatronsSection />
+        <ContactSection />
+        <FooterSection />
+      </div>
     </div>
   )
 }
