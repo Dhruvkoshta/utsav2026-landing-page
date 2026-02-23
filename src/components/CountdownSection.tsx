@@ -81,9 +81,12 @@ function RollDigit({ digit, fontSize }: RollDigitProps) {
       overflow: 'hidden',
       height: '1em',
       lineHeight: '1em',
+      verticalAlign: 'top',
       fontSize,
       fontFamily: '"Playfair Display", serif',
       fontWeight: 700,
+      fontVariantNumeric: 'lining-nums tabular-nums',
+      fontFeatureSettings: '"lnum" 1, "tnum" 1',
       color: '#fff',
       position: 'relative',
     }}>
@@ -91,14 +94,27 @@ function RollDigit({ digit, fontSize }: RollDigitProps) {
       <span
         ref={trackRef}
         style={{
-          display: 'inline-flex',
+          display: 'flex',
           flexDirection: 'column',
           transform: `translateY(-${digit}em)`,
           lineHeight: '1em',
+          willChange: 'transform',
         }}
       >
         {(['0','1','2','3','4','5','6','7','8','9'] as const).map((n) => (
-          <span key={n} style={{ display: 'block', lineHeight: '1em' }}>{n}</span>
+          <span
+            key={n}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '1em',
+              lineHeight: '1em',
+              overflow: 'hidden',
+            }}
+          >
+            {n}
+          </span>
         ))}
       </span>
     </span>
@@ -140,7 +156,6 @@ export default function CountdownSection({ sectionRef }: CountdownSectionProps) 
   const daysLabelRef = useRef<HTMLParagraphElement>(null)
   const subRowRef    = useRef<HTMLDivElement>(null)
   const bg1Ref       = useRef<HTMLDivElement>(null)
-  const bg2Ref       = useRef<HTMLDivElement>(null)
 
   // Reverse-countdown display value (animates from START_VALUE down to actual days)
   const START_VALUE = 999
@@ -155,29 +170,25 @@ export default function CountdownSection({ sectionRef }: CountdownSectionProps) 
     const section = sectionRef.current
     const inner   = innerRef.current
     const bg1     = bg1Ref.current
-    const bg2     = bg2Ref.current
     const headline   = headlineRef.current
     const daysLabel  = daysLabelRef.current
     const subRow     = subRowRef.current
-    if (!section || !inner || !bg1 || !bg2 || !headline || !daysLabel || !subRow) return
+    if (!section || !inner || !bg1 || !headline || !daysLabel || !subRow) return
 
     // Initial states
-    gsap.set(bg2,      { opacity: 0 })
     gsap.set(inner,    { opacity: 0, y: 40 })
     gsap.set(headline, { opacity: 0, y: 24 })
     gsap.set(daysLabel,{ opacity: 0, y: 16 })
     gsap.set(subRow,   { opacity: 0, y: 20 })
 
-    // ── BG crossfade + parallax on scroll ──
+    // ── BG parallax on scroll ──
     ScrollTrigger.create({
       trigger: section,
       start: 'top 80%',
       end: 'top 10%',
       scrub: 1.5,
       onUpdate: (self) => {
-        gsap.set(bg2, { opacity: self.progress })
         gsap.set(bg1, { y: self.progress * -40 })
-        gsap.set(bg2, { y: self.progress * -60 })
       },
     })
 
@@ -236,7 +247,7 @@ export default function CountdownSection({ sectionRef }: CountdownSectionProps) 
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
-        zIndex: 1,
+        zIndex: 0,
       }}
     >
       {/* Wallpaper BG 1 */}
@@ -249,20 +260,6 @@ export default function CountdownSection({ sectionRef }: CountdownSectionProps) 
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           zIndex: 0,
-        }}
-      />
-
-      {/* Wallpaper BG 2 (crossfades in on scroll) */}
-      <div
-        ref={bg2Ref}
-        style={{
-          position: 'absolute',
-          inset: '-10% 0',
-          backgroundImage: 'url(/wallhaven-yxy8zk_1920x1080.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          zIndex: 1,
-          opacity: 0,
         }}
       />
 
@@ -347,7 +344,7 @@ export default function CountdownSection({ sectionRef }: CountdownSectionProps) 
           <SubUnit value={time.minutes} label="Minutes" />
           <SubUnit value={time.seconds} label="Seconds" />
         </div>
-
+     
         {/* Event date hint */}
         <p style={{
           marginTop: '3rem',
@@ -360,6 +357,37 @@ export default function CountdownSection({ sectionRef }: CountdownSectionProps) 
         }}>
           October 1, 2026
         </p>
+           {/* Explore Events Button */}
+        <button
+          style={{
+            marginTop: '3.5rem',
+            padding: '1rem 3rem',
+            background: 'transparent',
+            border: '1px solid rgba(222,91,234,0.5)',
+            color: '#fff',
+            fontFamily: '"Inter", sans-serif',
+            fontSize: 'clamp(0.7rem, 1.2vw, 0.8rem)',
+            fontWeight: 400,
+            letterSpacing: '0.25em',
+            textTransform: 'uppercase',
+            cursor: 'pointer',
+            transition: 'all 0.4s ease',
+            backdropFilter: 'blur(5px)',
+            borderRadius: '2px',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(222,91,234,0.1)';
+            e.currentTarget.style.borderColor = 'rgba(222,91,234,1)';
+            e.currentTarget.style.boxShadow = '0 0 20px rgba(222,91,234,0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.borderColor = 'rgba(222,91,234,0.5)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
+          Explore Events
+        </button>
       </div>
     </section>
   )

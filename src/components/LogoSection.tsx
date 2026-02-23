@@ -43,9 +43,6 @@ export default function LogoSection({ onAnimationComplete }: LogoSectionProps) {
     const navLogo  = navLogoRef.current
     if (!overlay || layers.some((l) => !l) || !glow || !tagline || !line || !navLogo) return
 
-    // Lock scroll while loading animation plays
-    document.documentElement.style.overflow = 'hidden'
-
     layers.forEach((el) => {
       gsap.set(el, { opacity: 0, scale: 0.94, filter: 'blur(12px)' })
     })
@@ -57,8 +54,6 @@ export default function LogoSection({ onAnimationComplete }: LogoSectionProps) {
     // Auto-playing timeline (no scroll trigger)
     const tl = gsap.timeline({
       onComplete: () => {
-        // Unlock scroll immediately so the user can scroll as the overlay fades out
-        document.documentElement.style.overflow = ''
         onAnimationComplete?.()
         gsap.to(navLogo, {
           opacity: 1, x: 0, scale: 1,
@@ -140,7 +135,6 @@ export default function LogoSection({ onAnimationComplete }: LogoSectionProps) {
     }, lineStart + 0.2)
 
     return () => {
-      document.documentElement.style.overflow = ''
       tl.kill()
     }
   }, [onAnimationComplete])
