@@ -225,16 +225,6 @@ const subRowStyle: React.CSSProperties = {
   alignItems: 'flex-end',
 }
 
-const dateHintStyle: React.CSSProperties = {
-  marginTop: '3rem',
-  fontFamily: '"Inter", sans-serif',
-  fontWeight: 300,
-  fontSize: 'clamp(0.58rem, 1vw, 0.7rem)',
-  letterSpacing: '0.25em',
-  textTransform: 'uppercase',
-  color: 'rgba(255,255,255,0.28)',
-}
-
 // ── Section ───────────────────────────────────────────────────────────────────
 
 interface CountdownSectionProps {
