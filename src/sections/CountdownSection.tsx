@@ -238,10 +238,11 @@ const dateHintStyle: React.CSSProperties = {
 // ── Section ───────────────────────────────────────────────────────────────────
 
 interface CountdownSectionProps {
-  sectionRef: React.RefObject<HTMLElement | null>
+  sectionRef?: React.RefObject<HTMLElement | null>
 }
 
 export default function CountdownSection({ sectionRef }: CountdownSectionProps) {
+  const internalRef  = useRef<HTMLElement>(null)
   const innerRef     = useRef<HTMLDivElement>(null)
   const headlineRef  = useRef<HTMLParagraphElement>(null)
   const daysLabelRef = useRef<HTMLParagraphElement>(null)
@@ -258,7 +259,7 @@ export default function CountdownSection({ sectionRef }: CountdownSectionProps) 
 
   // ── Entrance: parallax bg + content fade-in ───────────────────────────────
   useEffect(() => {
-    const section = sectionRef.current
+    const section = (sectionRef ?? internalRef).current
     const inner   = innerRef.current
     const bg1     = bg1Ref.current
     const headline   = headlineRef.current
@@ -328,7 +329,7 @@ export default function CountdownSection({ sectionRef }: CountdownSectionProps) 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <section
-      ref={sectionRef}
+      ref={sectionRef ?? internalRef}
       style={sectionStyle}
     >
       {/* Wallpaper BG 1 */}
