@@ -1,12 +1,10 @@
 import { motion } from 'framer-motion'
-import { fadeUp, hoverLift } from './animations'
 
 /* ── Liquid-glass card wrapper ────────────────────────────────────────────── */
 
 export function GlassCard({
   children,
   className = '',
-  delay = 0,
 }: {
   children: React.ReactNode
   className?: string
@@ -14,7 +12,6 @@ export function GlassCard({
 }) {
   return (
     <motion.article
-      {...fadeUp(delay)}   // only entrance animation here
       className={`
         relative overflow-hidden rounded-[1.75rem]
         border border-white/10
@@ -25,7 +22,6 @@ export function GlassCard({
       `}
     >
       <motion.div
-        {...hoverLift}   // 👈 hover animation isolated here
         className="h-full w-full transition-all duration-500"
       >
         {/* highlights */}
