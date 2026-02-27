@@ -63,8 +63,8 @@ export default function PatronsSection() {
           <SectionTitle text="Patrons" />
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             <PatronCard name="Dr. B. S. Ragini Narayan" designation="Donor Trustee & Chairperson, BMSET" delay={0} />
-            <PatronCard name="Dr. P. Dayananda Pai" designation="Chairperson, BMSCE & Life Trustee, BMSET" delay={0.06} />
-            <PatronCard name="Shri Aviram Sharma" designation="Trustee, BMSET" delay={0.12} />
+            <PatronCard name="Dr. P. Dayananda Pai" designation="Life Trustee, BMSET, Chairperson, BMSCE" delay={0.06} />
+            <PatronCard name="Shri. Aviram Sharma" designation="Trustee, BMSET" delay={0.12} />
           </div>
         </div>
 
@@ -73,8 +73,8 @@ export default function PatronsSection() {
           <SectionTitle text="Advisory Committee" delay={0.05} />
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             <PatronCard name="Dr. Bheemsha Arya" designation="Principal, BMSCE" delay={0} />
-            <PatronCard name="Dr. Seshachalam D" designation="Vice Principal - Admin" delay={0.06} />
-            <PatronCard name="Dr. L. Ravikumar" designation="Vice Principal - Academic" delay={0.12} />
+            <PatronCard name="Dr. L. Ravikumar" designation="Vice Principal - Academic" delay={0.06} />
+            <PatronCard name="Dr. Seshachalam D" designation="Vice Principal - Admin" delay={0.12} />
           </div>
         </div>
 
@@ -83,15 +83,15 @@ export default function PatronsSection() {
           <SectionTitle text="Faculty Core Committee" delay={0.05} />
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             <PatronCard name="Dr. Rajeshwari Hegde" designation="Working Chairman" delay={0} />
-            <PatronCard name="Dr. Niranjan K. R." designation="Organising Secretary" delay={0.06} />
-            <PatronCard name="Prof. Namratha M." designation="Joint Organising Secretary" delay={0.12} />
-            <PatronCard name="Prof. Chaitanya L." designation="Faculty Treasurer" delay={0.18} />
-            <PatronCard name="Dr. Chethana K. Y." designation="Department of Aerospace Engineering" delay={0.24} />
-            <PatronCard name="Dr. Kaliprasad C. S." designation="Department of Physics" delay={0.3} />
+            <PatronCard name="Dr. Niranjan KR" designation="Organizing Secretary" delay={0.06} />
+            <PatronCard name="Dr. Namratha M" designation="Joint Organizing Secretary" delay={0.12} />
+            <PatronCard name="Dr. Smitha V Shenoy" designation="Faculty Treasurer" delay={0.18} />
+            <PatronCard name="Chaitanya L" delay={0.24} />
+            <PatronCard name="Dr. Chethana K Y" delay={0.3} />
           </div>
           <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 mx-auto max-w-4xl">
-            <PatronCard name="Prof. Manoj Kumar S." designation="Department of Computer Science and Data Science" delay={0.36} />
-            <PatronCard name="Dr. Soumya Lakshmi B. S." designation="Department of Machine Learning" delay={0.42} />
+            <PatronCard name="Dr. Kaliprasad C S" delay={0.36} />
+            <PatronCard name="Prameetha Pai" delay={0.42} />
           </div>
         </div>
 
@@ -99,15 +99,15 @@ export default function PatronsSection() {
         <div>
           <SectionTitle text="Student Core Committee" delay={0.05} />
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <PatronCard name="Amogh Ananda" delay={0} />
-            <PatronCard name="B. S. Shreevidya" delay={0.06} />
-            <PatronCard name="Chinmayi Anand" delay={0.12} />
-            <PatronCard name="G. Divyashree" delay={0.18} />
-            <PatronCard name="Sevitha N" delay={0.24} />
-            <PatronCard name="Tulasikrishna Tammina" delay={0.3} />
+            <PatronCard name="Anirudh P" delay={0} />
+            <PatronCard name="Nandish K P" delay={0.06} />
+            <PatronCard name="Tutari Likitha" delay={0.12} />
+            <PatronCard name="Vishnuvardhan S V" delay={0.18} />
+            <PatronCard name="Ananya K" delay={0.24} />
+            <PatronCard name="Goutham T G" delay={0.3} />
           </div>
           <div className="mt-6 mx-auto max-w-sm">
-            <PatronCard name="Varun Reddy" delay={0.36} />
+            <PatronCard name="Rishika Nayana Shakthi" delay={0.36} />
           </div>
         </div>
 
