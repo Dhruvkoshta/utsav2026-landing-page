@@ -22,7 +22,7 @@ export default function ThemeAboutSection() {
 
             <p className="relative mb-3 text-[0.7rem] font-medium uppercase tracking-[0.4em] text-amber-200/70">
               <ShinyText
-                text="Utsav Ananta"
+                text="Utsav Trayana"
                 speed={3}
                 color="rgba(253,230,138,0.7)"
                 shineColor="#ffffff"
