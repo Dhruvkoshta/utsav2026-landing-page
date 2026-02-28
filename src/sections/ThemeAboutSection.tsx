@@ -15,7 +15,7 @@ export default function ThemeAboutSection() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start lg:gap-8">
 
           {/* ──────── Column 1 — Theme (Utsav Ananta) ──────── */}
-          <GlassCard delay={0} className="p-8 sm:p-10 lg:-mt-3">
+          <GlassCard delay={0} className="p-8 sm:p-10">
             {/* Warm accent glow inside card */}
             <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-amber-300/9 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-20 -left-12 h-44 w-44 rounded-full bg-rose-300/7 blur-3xl" />
@@ -49,19 +49,20 @@ export default function ThemeAboutSection() {
             <div className="mb-7 h-px w-16 origin-left bg-linear-to-r from-amber-300/50 to-transparent" />
 
             <p className="relative max-w-prose font-inter text-[0.95rem] leading-[1.85] text-white/80 sm:text-base sm:leading-8">
-              A grand celebration where imagination knows no bounds and creativity takes
-              center stage. True to its name, Ananta signifies infinite ideas, talents,
-              and dreams coming together in one vibrant celebration. This fest is a tribute
-              to the limitless potential within every individual, where art, culture,
-              technology, and innovation merge into a spectacular showcase of passion and
-              skill. Join us as we transform our campus into a canvas of colors, rhythms,
-              and energy — because every moment at Utsav Ananta is a celebration of
-              creativity that never ends.
+              Utsav Trayana is a festival where lots of different people come together. Everyone has their own story, their own culture, and their own talents. Some people like to dance, some like to sing, some like to draw, speak, or create new ideas.
+              <br /><br />
+              "Celebration of Creativity, Culture and Journeys coming together" simply means this: People from different places and backgrounds meet in one place and share what makes them special.
+              <br /><br />
+              Trayana shows that even though we are all different, we can work together and make something beautiful. Like when different colors mix to make a bright painting or when many instruments play together to make one song.
+              <br /><br />
+              At Utsav, everyone gets a chance to shine. No one loses who they are. Instead, when everyone joins in, the festival becomes bigger, happier, and more exciting.
+              <br /><br />
+              It is not just a fest. It is many stories coming together to create one big, joyful memory.
             </p>
           </GlassCard>
 
           {/* ──────── Column 2 — About Us (BMSCE) ──────── */}
-          <GlassCard delay={0.12} className="p-8 sm:p-10 lg:mt-8">
+          <GlassCard delay={0.12} className="p-8 sm:p-10">
             {/* Cool-toned accent glow */}
             <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-slate-300/6 blur-3xl" />
 
