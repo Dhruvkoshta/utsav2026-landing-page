@@ -411,9 +411,13 @@ class App {
   boundOnTouchDown!: (e: MouseEvent | TouchEvent) => void;
   boundOnTouchMove!: (e: MouseEvent | TouchEvent) => void;
   boundOnTouchUp!: () => void;
+  boundOnMouseEnter!: () => void;
+  boundOnMouseLeave!: () => void;
 
   isDown: boolean = false;
   start: number = 0;
+  isHovering: boolean = false;
+  autoScrollSpeed: number = 0.1;
 
   constructor(
     container: HTMLElement,
@@ -567,6 +571,14 @@ class App {
     this.onCheck();
   }
 
+  onMouseEnter() {
+    this.isHovering = true;
+  }
+
+  onMouseLeave() {
+    this.isHovering = false;
+  }
+
   onWheel(e: Event) {
     const wheelEvent = e as WheelEvent & { wheelDelta?: number; detail?: number };
     const delta = wheelEvent.deltaY || wheelEvent.wheelDelta || wheelEvent.detail || 0;
@@ -601,6 +613,11 @@ class App {
   }
 
   update() {
+    // Apply auto-scroll when not hovering and not dragging
+    if (!this.isHovering && !this.isDown) {
+      this.scroll.target += this.autoScrollSpeed;
+    }
+    
     this.scroll.current = lerp(this.scroll.current, this.scroll.target, this.scroll.ease);
     const direction = this.scroll.current > this.scroll.last ? 'right' : 'left';
     if (this.medias) {
@@ -617,6 +634,8 @@ class App {
     this.boundOnTouchDown = this.onTouchDown.bind(this);
     this.boundOnTouchMove = this.onTouchMove.bind(this);
     this.boundOnTouchUp = this.onTouchUp.bind(this);
+    this.boundOnMouseEnter = this.onMouseEnter.bind(this);
+    this.boundOnMouseLeave = this.onMouseLeave.bind(this);
     window.addEventListener('resize', this.boundOnResize);
     window.addEventListener('mousewheel', this.boundOnWheel);
     window.addEventListener('wheel', this.boundOnWheel);
@@ -626,6 +645,8 @@ class App {
     window.addEventListener('touchstart', this.boundOnTouchDown);
     window.addEventListener('touchmove', this.boundOnTouchMove);
     window.addEventListener('touchend', this.boundOnTouchUp);
+    this.container.addEventListener('mouseenter', this.boundOnMouseEnter);
+    this.container.addEventListener('mouseleave', this.boundOnMouseLeave);
   }
 
   destroy() {
@@ -639,6 +660,8 @@ class App {
     window.removeEventListener('touchstart', this.boundOnTouchDown);
     window.removeEventListener('touchmove', this.boundOnTouchMove);
     window.removeEventListener('touchend', this.boundOnTouchUp);
+    this.container.removeEventListener('mouseenter', this.boundOnMouseEnter);
+    this.container.removeEventListener('mouseleave', this.boundOnMouseLeave);
     if (this.renderer && this.renderer.gl && this.renderer.gl.canvas.parentNode) {
       this.renderer.gl.canvas.parentNode.removeChild(this.renderer.gl.canvas as HTMLCanvasElement);
     }
