@@ -182,6 +182,9 @@ class Media {
   speed: number = 0;
   isBefore: boolean = false;
   isAfter: boolean = false;
+  isLoaded: boolean = false;
+  observer?: IntersectionObserver;
+  isVisible: boolean = false;
 
   constructor({
     geometry,
@@ -215,19 +218,22 @@ class Media {
     this.font = font;
     this.createShader();
     this.createMesh();
+    // Only create titles for initial batch, or optimize as needed
     this.createTitle();
     this.onResize();
   }
 
   createShader() {
     const texture = new Texture(this.gl, {
-      generateMipmaps: true
+      generateMipmaps: false, // Disabling mipmaps for less GPU memory
+      minFilter: this.gl.LINEAR,
+      magFilter: this.gl.LINEAR
     });
     this.program = new Program(this.gl, {
       depthTest: false,
       depthWrite: false,
       vertex: `
-        precision highp float;
+        precision mediump float;
         attribute vec3 position;
         attribute vec2 uv;
         uniform mat4 modelViewMatrix;
@@ -238,16 +244,18 @@ class Media {
         void main() {
           vUv = uv;
           vec3 p = position;
-          p.z = (sin(p.x * 4.0 + uTime) * 1.5 + cos(p.y * 2.0 + uTime) * 1.5) * (0.1 + uSpeed * 0.5);
+          // Wave logic
+          p.z = (sin(p.x * 4.0 + uTime) * 1.5 + cos(p.y * 2.0 + uTime) * 1.5) * (0.02 + uSpeed * 0.2);
           gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
         }
       `,
       fragment: `
-        precision highp float;
+        precision mediump float;
         uniform vec2 uImageSizes;
         uniform vec2 uPlaneSizes;
         uniform sampler2D tMap;
         uniform float uBorderRadius;
+        uniform float uAlpha;
         varying vec2 vUv;
         
         float roundedBoxSDF(vec2 p, vec2 b, float r) {
@@ -268,9 +276,8 @@ class Media {
           
           float d = roundedBoxSDF(vUv - 0.5, vec2(0.5 - uBorderRadius), uBorderRadius);
           
-          // Smooth antialiasing for edges
-          float edgeSmooth = 0.002;
-          float alpha = 1.0 - smoothstep(-edgeSmooth, edgeSmooth, d);
+          float edgeSmooth = 0.005; // Slightly larger for better perf
+          float alpha = (1.0 - smoothstep(-edgeSmooth, edgeSmooth, d)) * uAlpha;
           
           gl_FragColor = vec4(color.rgb, alpha);
         }
@@ -281,16 +288,24 @@ class Media {
         uImageSizes: { value: [0, 0] },
         uSpeed: { value: 0 },
         uTime: { value: 100 * Math.random() },
-        uBorderRadius: { value: this.borderRadius }
+        uBorderRadius: { value: this.borderRadius },
+        uAlpha: { value: 0 }
       },
       transparent: true
     });
+  }
+
+  loadTexture() {
+    if (this.isLoaded) return;
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.src = this.image;
     img.onload = () => {
-      texture.image = img;
+      this.program.uniforms.tMap.value.image = img;
       this.program.uniforms.uImageSizes.value = [img.naturalWidth, img.naturalHeight];
+      this.isLoaded = true;
+      // Simple fade in
+      this.program.uniforms.uAlpha.value = 1;
     };
   }
 
@@ -338,13 +353,30 @@ class Media {
     }
 
     this.speed = scroll.current - scroll.last;
-    this.program.uniforms.uTime.value += 0.04;
-    this.program.uniforms.uSpeed.value = this.speed;
+    this.program.uniforms.uTime.value += 0.01; // Slower time increment for smoother wave
+    this.program.uniforms.uSpeed.value = lerp(this.program.uniforms.uSpeed.value, this.speed, 0.1);
 
     const planeOffset = this.plane.scale.x / 2;
     const viewportOffset = this.viewport.width / 2;
     this.isBefore = this.plane.position.x + planeOffset < -viewportOffset;
     this.isAfter = this.plane.position.x - planeOffset > viewportOffset;
+
+    // Load texture and enable visibility if entering or near viewport
+    if (Math.abs(this.plane.position.x) < viewportOffset * 3) {
+      this.loadTexture();
+      this.isVisible = true;
+    } else {
+      this.isVisible = false;
+    }
+
+    if (this.isVisible) {
+      this.plane.visible = true;
+      if (this.title && this.title.mesh) this.title.mesh.visible = true;
+    } else {
+      this.plane.visible = false;
+      if (this.title && this.title.mesh) this.title.mesh.visible = false;
+    }
+
     if (direction === 'right' && this.isBefore) {
       this.extra -= this.widthTotal;
       this.isBefore = this.isAfter = false;
@@ -464,9 +496,10 @@ class App {
   }
 
   createGeometry() {
+    // Reduced from 50/100 to 20/40 segments to significantly reduce vertex count
     this.planeGeometry = new Plane(this.gl, {
-      heightSegments: 50,
-      widthSegments: 100
+      heightSegments: 20,
+      widthSegments: 40
     });
   }
 
@@ -566,7 +599,10 @@ class App {
   onWheel(e: Event) {
     const wheelEvent = e as WheelEvent & { wheelDelta?: number; detail?: number };
     const delta = wheelEvent.deltaY || wheelEvent.wheelDelta || wheelEvent.detail || 0;
-    this.scroll.target += (delta > 0 ? this.scrollSpeed : -this.scrollSpeed) * 0.2;
+    
+    // Normalize delta for smoother cross-browser feel
+    const normalizedDelta = Math.sign(delta) * Math.min(Math.abs(delta), 100);
+    this.scroll.target += (normalizedDelta > 0 ? this.scrollSpeed : -this.scrollSpeed) * 0.15;
     this.onCheckDebounce();
   }
 
@@ -597,13 +633,20 @@ class App {
   }
 
   update() {
-    this.scroll.current = lerp(this.scroll.current, this.scroll.target, this.scroll.ease);
-    const direction = this.scroll.current > this.scroll.last ? 'right' : 'left';
-    if (this.medias) {
-      this.medias.forEach(media => media.update(this.scroll, direction));
+    // Only update if visible to save CPU/GPU
+    const rect = this.container.getBoundingClientRect();
+    const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+    
+    if (isVisible) {
+      this.scroll.current = lerp(this.scroll.current, this.scroll.target, this.scroll.ease);
+      const direction = this.scroll.current > this.scroll.last ? 'right' : 'left';
+      if (this.medias) {
+        this.medias.forEach(media => media.update(this.scroll, direction));
+      }
+      this.renderer.render({ scene: this.scene, camera: this.camera });
+      this.scroll.last = this.scroll.current;
     }
-    this.renderer.render({ scene: this.scene, camera: this.camera });
-    this.scroll.last = this.scroll.current;
+    
     this.raf = window.requestAnimationFrame(this.update.bind(this));
   }
 
@@ -613,14 +656,15 @@ class App {
     this.boundOnTouchDown = this.onTouchDown.bind(this);
     this.boundOnTouchMove = this.onTouchMove.bind(this);
     this.boundOnTouchUp = this.onTouchUp.bind(this);
+    
     window.addEventListener('resize', this.boundOnResize);
-    window.addEventListener('mousewheel', this.boundOnWheel);
-    window.addEventListener('wheel', this.boundOnWheel);
+    window.addEventListener('mousewheel', this.boundOnWheel, { passive: true });
+    window.addEventListener('wheel', this.boundOnWheel, { passive: true });
     window.addEventListener('mousedown', this.boundOnTouchDown);
     window.addEventListener('mousemove', this.boundOnTouchMove);
     window.addEventListener('mouseup', this.boundOnTouchUp);
-    window.addEventListener('touchstart', this.boundOnTouchDown);
-    window.addEventListener('touchmove', this.boundOnTouchMove);
+    window.addEventListener('touchstart', this.boundOnTouchDown, { passive: true });
+    window.addEventListener('touchmove', this.boundOnTouchMove, { passive: true });
     window.addEventListener('touchend', this.boundOnTouchUp);
   }
 
