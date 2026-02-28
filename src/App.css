@@ -1,8 +1,8 @@
+/* App.css — cleaned up to avoid layout conflicts with full-bleed sections */
+
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  /* Removed max-width, padding, and text-align that were interfering
+     with full-width sections and mobile layout */
 }
 
 .logo {

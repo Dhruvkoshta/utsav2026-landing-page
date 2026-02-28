@@ -6,16 +6,26 @@ import { GlassCard } from '../components/GlassCard'
 export default function ThemeAboutSection() {
   return (
     <section
+      id="theme-section"
       aria-labelledby="theme-heading"
       className="relative w-full overflow-hidden px-4 py-20 sm:px-6 sm:py-28 lg:px-10"
     >
       {/* Top fade to blend with Countdown section */}
-      <div className="pointer-events-none absolute top-0 left-0 right-0 z-20" style={{ height: '10rem', background: 'linear-gradient(to bottom, rgb(7,5,10), transparent)' }} />
+      <div
+        className="pointer-events-none absolute top-0 left-0 right-0 z-20"
+        style={{ height: '10rem', background: 'linear-gradient(to bottom, rgb(7,5,10), transparent)' }}
+      />
+
       <div className="relative z-10 mx-auto w-full max-w-7xl">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start lg:gap-8">
 
-          {/* ──────── Column 1 — Theme (Utsav Ananta) ──────── */}
-          <GlassCard delay={0} className="p-8 sm:p-10">
+          {/* ──────── Column 1 — Theme (Utsav Trayana) ──────── */}
+          {/* 
+            z-[100] ensures the card renders above the fixed LogoSection logo on mobile.
+            The fixed logo typically has a z-index around 50–99; raising the card above it
+            means the logo won't bleed through the glassmorphism backdrop.
+          */}
+          <GlassCard delay={0} className="relative z-[100] p-8 sm:p-10">
             {/* Warm accent glow inside card */}
             <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-amber-300/9 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-20 -left-12 h-44 w-44 rounded-full bg-rose-300/7 blur-3xl" />
@@ -58,7 +68,7 @@ export default function ThemeAboutSection() {
           </GlassCard>
 
           {/* ──────── Column 2 — About Us (BMSCE) ──────── */}
-          <GlassCard delay={0.12} className="p-8 sm:p-10">
+          <GlassCard delay={0.12} className="relative z-[100] p-8 sm:p-10">
             {/* Cool-toned accent glow */}
             <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-slate-300/6 blur-3xl" />
 

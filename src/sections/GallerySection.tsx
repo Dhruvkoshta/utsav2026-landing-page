@@ -37,6 +37,7 @@ export default function GallerySection() {
           borderRadius={0.05}
           scrollSpeed={2}
           scrollEase={0.05}
+          autoScrollSpeed={0.1} 
         />
       </div>
     </section>

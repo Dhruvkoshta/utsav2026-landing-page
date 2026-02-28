@@ -183,7 +183,6 @@ class Media {
   isBefore: boolean = false;
   isAfter: boolean = false;
   isLoaded: boolean = false;
-  observer?: IntersectionObserver;
   isVisible: boolean = false;
 
   constructor({
@@ -218,14 +217,13 @@ class Media {
     this.font = font;
     this.createShader();
     this.createMesh();
-    // Only create titles for initial batch, or optimize as needed
     this.createTitle();
     this.onResize();
   }
 
   createShader() {
     const texture = new Texture(this.gl, {
-      generateMipmaps: false, // Disabling mipmaps for less GPU memory
+      generateMipmaps: false,
       minFilter: this.gl.LINEAR,
       magFilter: this.gl.LINEAR
     });
@@ -276,7 +274,7 @@ class Media {
           
           float d = roundedBoxSDF(vUv - 0.5, vec2(0.5 - uBorderRadius), uBorderRadius);
           
-          float edgeSmooth = 0.005; // Slightly larger for better perf
+          float edgeSmooth = 0.005;
           float alpha = (1.0 - smoothstep(-edgeSmooth, edgeSmooth, d)) * uAlpha;
           
           gl_FragColor = vec4(color.rgb, alpha);
@@ -304,7 +302,6 @@ class Media {
       this.program.uniforms.tMap.value.image = img;
       this.program.uniforms.uImageSizes.value = [img.naturalWidth, img.naturalHeight];
       this.isLoaded = true;
-      // Simple fade in
       this.program.uniforms.uAlpha.value = 1;
     };
   }
@@ -353,7 +350,7 @@ class Media {
     }
 
     this.speed = scroll.current - scroll.last;
-    this.program.uniforms.uTime.value += 0.01; // Slower time increment for smoother wave
+    this.program.uniforms.uTime.value += 0.01;
     this.program.uniforms.uSpeed.value = lerp(this.program.uniforms.uSpeed.value, this.speed, 0.1);
 
     const planeOffset = this.plane.scale.x / 2;
@@ -361,7 +358,6 @@ class Media {
     this.isBefore = this.plane.position.x + planeOffset < -viewportOffset;
     this.isAfter = this.plane.position.x - planeOffset > viewportOffset;
 
-    // Load texture and enable visibility if entering or near viewport
     if (Math.abs(this.plane.position.x) < viewportOffset * 3) {
       this.loadTexture();
       this.isVisible = true;
@@ -414,11 +410,13 @@ interface AppConfig {
   font?: string;
   scrollSpeed?: number;
   scrollEase?: number;
+  autoScrollSpeed?: number;
 }
 
 class App {
   container: HTMLElement;
   scrollSpeed: number;
+  autoScrollSpeed: number;
   scroll: {
     ease: number;
     current: number;
@@ -443,8 +441,11 @@ class App {
   boundOnTouchDown!: (e: MouseEvent | TouchEvent) => void;
   boundOnTouchMove!: (e: MouseEvent | TouchEvent) => void;
   boundOnTouchUp!: () => void;
+  boundOnPointerEnter!: () => void;
+  boundOnPointerLeave!: () => void;
 
   isDown: boolean = false;
+  isHovered: boolean = false;
   start: number = 0;
 
   constructor(
@@ -456,12 +457,14 @@ class App {
       borderRadius = 0,
       font = 'bold 30px Figtree',
       scrollSpeed = 2,
-      scrollEase = 0.05
+      scrollEase = 0.05,
+      autoScrollSpeed = 0.06 // Set a visibly noticeable default speed
     }: AppConfig
   ) {
     document.documentElement.classList.remove('no-js');
     this.container = container;
     this.scrollSpeed = scrollSpeed;
+    this.autoScrollSpeed = autoScrollSpeed;
     this.scroll = { ease: scrollEase, current: 0, target: 0, last: 0 };
     this.onCheckDebounce = debounce(this.onCheck.bind(this), 200);
     this.createRenderer();
@@ -470,8 +473,10 @@ class App {
     this.onResize();
     this.createGeometry();
     this.createMedias(items, bend, textColor, borderRadius, font);
-    this.update();
     this.addEventListeners();
+    
+    // Start the animation loop
+    this.update();
   }
 
   createRenderer() {
@@ -496,7 +501,6 @@ class App {
   }
 
   createGeometry() {
-    // Reduced from 50/100 to 20/40 segments to significantly reduce vertex count
     this.planeGeometry = new Plane(this.gl, {
       heightSegments: 20,
       widthSegments: 40
@@ -511,50 +515,8 @@ class App {
     font: string
   ) {
     const defaultItems = [
-      {
-        image: '/gallery/img1.webp',
-        text: ''
-      },
-      {
-        image: '/gallery/img2.webp',
-        text: ''
-      },
-      {
-        image: '/gallery/img3.webp',
-        text: 'Waterfall'
-      },
-      {
-        image: '/gallery/img4.webp',
-        text: 'Strawberries'
-      },
-      {
-        image: '/gallery/img5.webp',
-        text: 'Deep Diving'
-      },
-      {
-        image: '/gallery/img6.webp',
-        text: 'Train Track'
-      },
-      {
-        image: '/gallery/img7.webp',
-        text: 'Santorini'
-      },
-      {
-        image: '/gallery/img8.webp',
-        text: 'Blurry Lights'
-      },
-      {
-        image: '/gallery/img9.webp',
-        text: 'New York'
-      },
-      {
-        image: '/gallery/img10.webp',
-        text: 'Good Boy'
-      },
-      {
-        image: '/gallery/img11.webp',
-        text: 'Coastline'
-      }
+      { image: '/gallery/img1.webp', text: '' },
+      { image: '/gallery/img2.webp', text: '' },
     ];
     const galleryItems = items && items.length ? items : defaultItems;
     this.mediasImages = galleryItems.concat(galleryItems);
@@ -600,10 +562,17 @@ class App {
     const wheelEvent = e as WheelEvent & { wheelDelta?: number; detail?: number };
     const delta = wheelEvent.deltaY || wheelEvent.wheelDelta || wheelEvent.detail || 0;
     
-    // Normalize delta for smoother cross-browser feel
     const normalizedDelta = Math.sign(delta) * Math.min(Math.abs(delta), 100);
     this.scroll.target += (normalizedDelta > 0 ? this.scrollSpeed : -this.scrollSpeed) * 0.15;
     this.onCheckDebounce();
+  }
+
+  onPointerEnter() {
+    this.isHovered = true;
+  }
+
+  onPointerLeave() {
+    this.isHovered = false;
   }
 
   onCheck() {
@@ -632,22 +601,27 @@ class App {
     }
   }
 
-  update() {
-    // Only update if visible to save CPU/GPU
-    const rect = this.container.getBoundingClientRect();
-    const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+  // Converted to an arrow function so 'this' binding never gets lost in requestAnimationFrame
+  update = () => {
+    // ---- AUTO SCROLL LOGIC ----
+    // We removed the 'isVisible' intersection observer check here because complex 
+    // nested React components or fixed layouts can cause it to report 'false' and permanently freeze.
+    // Subtracting autoScrollSpeed moves the gallery endlessly from Left to Right
+    if (!this.isHovered && !this.isDown) {
+      this.scroll.target -= this.autoScrollSpeed; 
+    }
+
+    this.scroll.current = lerp(this.scroll.current, this.scroll.target, this.scroll.ease);
+    const direction = this.scroll.current > this.scroll.last ? 'right' : 'left';
     
-    if (isVisible) {
-      this.scroll.current = lerp(this.scroll.current, this.scroll.target, this.scroll.ease);
-      const direction = this.scroll.current > this.scroll.last ? 'right' : 'left';
-      if (this.medias) {
-        this.medias.forEach(media => media.update(this.scroll, direction));
-      }
-      this.renderer.render({ scene: this.scene, camera: this.camera });
-      this.scroll.last = this.scroll.current;
+    if (this.medias) {
+      this.medias.forEach(media => media.update(this.scroll, direction));
     }
     
-    this.raf = window.requestAnimationFrame(this.update.bind(this));
+    this.renderer.render({ scene: this.scene, camera: this.camera });
+    this.scroll.last = this.scroll.current;
+    
+    this.raf = window.requestAnimationFrame(this.update);
   }
 
   addEventListeners() {
@@ -656,6 +630,8 @@ class App {
     this.boundOnTouchDown = this.onTouchDown.bind(this);
     this.boundOnTouchMove = this.onTouchMove.bind(this);
     this.boundOnTouchUp = this.onTouchUp.bind(this);
+    this.boundOnPointerEnter = this.onPointerEnter.bind(this);
+    this.boundOnPointerLeave = this.onPointerLeave.bind(this);
     
     window.addEventListener('resize', this.boundOnResize);
     window.addEventListener('mousewheel', this.boundOnWheel, { passive: true });
@@ -666,6 +642,10 @@ class App {
     window.addEventListener('touchstart', this.boundOnTouchDown, { passive: true });
     window.addEventListener('touchmove', this.boundOnTouchMove, { passive: true });
     window.addEventListener('touchend', this.boundOnTouchUp);
+    
+    // Using pointer events instead of mouse events for better mobile/touch-pen support
+    this.container.addEventListener('pointerenter', this.boundOnPointerEnter);
+    this.container.addEventListener('pointerleave', this.boundOnPointerLeave);
   }
 
   destroy() {
@@ -679,6 +659,9 @@ class App {
     window.removeEventListener('touchstart', this.boundOnTouchDown);
     window.removeEventListener('touchmove', this.boundOnTouchMove);
     window.removeEventListener('touchend', this.boundOnTouchUp);
+    this.container.removeEventListener('pointerenter', this.boundOnPointerEnter);
+    this.container.removeEventListener('pointerleave', this.boundOnPointerLeave);
+    
     if (this.renderer && this.renderer.gl && this.renderer.gl.canvas.parentNode) {
       this.renderer.gl.canvas.parentNode.removeChild(this.renderer.gl.canvas as HTMLCanvasElement);
     }
@@ -693,6 +676,7 @@ interface CircularGalleryProps {
   font?: string;
   scrollSpeed?: number;
   scrollEase?: number;
+  autoScrollSpeed?: number;
 }
 
 export default function CircularGallery({
@@ -702,9 +686,11 @@ export default function CircularGallery({
   borderRadius = 0.05,
   font = 'bold 30px Figtree',
   scrollSpeed = 2,
-  scrollEase = 0.05
+  scrollEase = 0.05,
+  autoScrollSpeed = 0.06 // Set to 0.06 for a noticeable glide
 }: CircularGalleryProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  
   useEffect(() => {
     if (!containerRef.current) return;
     const app = new App(containerRef.current, {
@@ -714,11 +700,13 @@ export default function CircularGallery({
       borderRadius,
       font,
       scrollSpeed,
-      scrollEase
+      scrollEase,
+      autoScrollSpeed
     });
     return () => {
       app.destroy();
     };
-  }, [items, bend, textColor, borderRadius, font, scrollSpeed, scrollEase]);
+  }, [items, bend, textColor, borderRadius, font, scrollSpeed, scrollEase, autoScrollSpeed]);
+  
   return <div className="w-full h-full overflow-hidden cursor-grab active:cursor-grabbing" ref={containerRef} />;
 }

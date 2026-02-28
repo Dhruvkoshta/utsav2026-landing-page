@@ -173,8 +173,23 @@ export default function LogoSection({ onAnimationComplete }: LogoSectionProps) {
       duration: 0.9, ease: 'power3.out',
     }, lineStart + 0.2)
 
+    // ── Scroll listener: lower z-index when user scrolls past first viewport ──
+    // This prevents the fixed nav logo from overlapping card content in later sections.
+    const handleScroll = () => {
+      const nav = navLogoRef.current
+      if (!nav) return
+      // Once scrolled more than 80% of the viewport height, drop behind page content
+      if (window.scrollY > window.innerHeight * 0.8) {
+        nav.style.zIndex = '10'
+      } else {
+        nav.style.zIndex = '100'
+      }
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+
     return () => {
       tl.kill()
+      window.removeEventListener('scroll', handleScroll)
     }
   }, [onAnimationComplete])
 
@@ -253,12 +268,11 @@ export default function LogoSection({ onAnimationComplete }: LogoSectionProps) {
 
         <div
           ref={logoContainerRef}
-          style={
-          {
-          position: 'relative',
-          zIndex: 2,
-          width: 'min(70vmin, 500px)',
-          aspectRatio: '997.05 / 892.10',
+          style={{
+            position: 'relative',
+            zIndex: 2,
+            width: 'min(70vmin, 500px)',
+            aspectRatio: '997.05 / 892.10',
           }}>
           {LAYERS.map((layer, i) => (
             <img
