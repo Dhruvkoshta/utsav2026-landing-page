@@ -8,16 +8,16 @@ const EVENT_DATE = new Date('2026-04-17T00:00:00')
 const START_VALUE = 999
 const DIGIT_LABELS = ['0','1','2','3','4','5','6','7','8','9'] as const
 
-// The Layer Stack from your LogoSection
-const LAYERS = [
-  { file: 'logo-path8.svg',  zIndex: 7 },
-  { file: 'logo-path9.svg',  zIndex: 6 },
-  { file: 'logo-path10.svg', zIndex: 5 },
-  { file: 'logo-path11.svg', zIndex: 4 },
-  { file: 'logo-path12.svg', zIndex: 3 },
-  { file: 'logo-path13.svg', zIndex: 2 },
-  { file: 'logo-path14.svg', zIndex: 1 },
-]
+// The Layer Stack from your LogoSection (Commented out for single image switch)
+// const LAYERS = [
+//   { file: 'logo-path8.svg',  zIndex: 7 },
+//   { file: 'logo-path9.svg',  zIndex: 6 },
+//   { file: 'logo-path10.svg', zIndex: 5 },
+//   { file: 'logo-path11.svg', zIndex: 4 },
+//   { file: 'logo-path12.svg', zIndex: 3 },
+//   { file: 'logo-path13.svg', zIndex: 2 },
+//   { file: 'logo-path14.svg', zIndex: 1 },
+// ]
 
 function getDaysLeft(): number {
   const now = new Date()
@@ -97,7 +97,10 @@ export default function CountdownSection({ sectionRef }: { sectionRef?: React.Re
   const internalRef  = useRef<HTMLElement>(null)
   const innerRef     = useRef<HTMLDivElement>(null)
   const logoContainerRef = useRef<HTMLDivElement>(null)
-  const layerRefs    = useRef<(HTMLImageElement | null)[]>([])
+  
+  // const layerRefs    = useRef<(HTMLImageElement | null)[]>([])
+  const logoRef = useRef<HTMLImageElement>(null)
+  
   const headlineRef  = useRef<HTMLParagraphElement>(null)
   const daysLabelRef = useRef<HTMLParagraphElement>(null)
   const subRowRef    = useRef<HTMLDivElement>(null)
@@ -111,13 +114,15 @@ export default function CountdownSection({ sectionRef }: { sectionRef?: React.Re
     const section = (sectionRef ?? internalRef).current
     const inner   = innerRef.current
     const bg1     = bg1Ref.current
-    const layers  = layerRefs.current
+    // const layers  = layerRefs.current
+    const logo    = logoRef.current
     
     if (!section || !inner || !bg1) return
 
     // Initial states
     gsap.set(inner, { opacity: 0, y: 40 })
-    gsap.set(layers, { opacity: 0, scale: 0.9, filter: 'blur(12px)' }) // Match your logo preloader start
+    // gsap.set(layers, { opacity: 0, scale: 0.9, filter: 'blur(12px)' }) // Match your logo preloader start
+    gsap.set(logo, { opacity: 0, scale: 0.9, filter: 'blur(12px)' }) 
     gsap.set([headlineRef.current, daysLabelRef.current, subRowRef.current], { opacity: 0, y: 20 })
 
     // Parallax Background
@@ -141,16 +146,25 @@ export default function CountdownSection({ sectionRef }: { sectionRef?: React.Re
     tl.to(inner, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, 0)
     tl.to(headlineRef.current, { opacity: 1, y: 0, duration: 0.8 }, 0.2)
 
-    // 2. Animate Logo Layers (Staggered assembly)
-    layers.forEach((layer, i) => {
-      tl.to(layer, {
-        opacity: 1,
-        scale: 1,
-        filter: 'blur(0px)',
-        duration: 0.9,
-        ease: 'power3.out'
-      }, 0.1 + i * 0.15)
-    })
+    // 2. Animate Logo Layers (Staggered assembly) - Commented out
+    // layers.forEach((layer, i) => {
+    //   tl.to(layer, {
+    //     opacity: 1,
+    //     scale: 1,
+    //     filter: 'blur(0px)',
+    //     duration: 0.9,
+    //     ease: 'power3.out'
+    //   }, 0.1 + i * 0.15)
+    // })
+
+    // 2. Animate Logo (Single image reveal)
+    tl.to(logo, {
+      opacity: 1,
+      scale: 1,
+      filter: 'blur(0px)',
+      duration: 0.9,
+      ease: 'power3.out'
+    }, 0.2)
 
     // 3. Roll the days counter
     tl.call(() => {
@@ -191,15 +205,16 @@ export default function CountdownSection({ sectionRef }: { sectionRef?: React.Re
           Utsav · BMSCE · 2026
         </p>
         
-        {/* MULTI-LAYERED LOGO */}
-        <div 
+        {/* MULTI-LAYERED LOGO (Commented out) */}
+        {/* <div 
           ref={logoContainerRef} 
           style={{ 
             position: 'relative', 
             width: 'clamp(160px, 22vw, 320px)', 
             aspectRatio: '997.05 / 892.10',
             marginBottom: '2rem',
-            marginTop: '1.5rem'
+            marginTop: '1.5rem',
+            transform: 'translate(4%, 4%)'
           }}
         >
           {LAYERS.map((layer, i) => (
@@ -222,6 +237,33 @@ export default function CountdownSection({ sectionRef }: { sectionRef?: React.Re
               draggable={false}
             />
           ))}
+        </div>
+        */}
+
+        {/* SINGLE LOGO */}
+        <div 
+          ref={logoContainerRef} 
+          style={{ 
+            position: 'relative', 
+            width: 'clamp(160px, 22vw, 320px)', 
+            marginBottom: '2rem',
+            marginTop: '1.5rem',
+            transform: 'translate(-0.5%, 10%)' // Kept your manual nudge!
+          }}
+        >
+          <img
+            ref={logoRef}
+            src="/u26 final logo.webp"
+            alt="Utsav Logo"
+            style={{
+              width: '100%',
+              height: 'auto',
+              display: 'block',
+              userSelect: 'none',
+              pointerEvents: 'none',
+            }}
+            draggable={false}
+          />
         </div>
 
         {/* Days Counter */}
