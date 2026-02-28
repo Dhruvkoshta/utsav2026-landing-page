@@ -32,6 +32,7 @@ export default function LogoSection({ onAnimationComplete }: LogoSectionProps) {
   const glowRef    = useRef<HTMLDivElement>(null)
   const taglineRef = useRef<HTMLParagraphElement>(null)
   const lineRef    = useRef<HTMLDivElement>(null)
+  const navBarRef  = useRef<HTMLDivElement>(null)
   const navLogoRef = useRef<HTMLDivElement>(null)
   const logoContainerRef = useRef<HTMLDivElement>(null)
 
@@ -41,9 +42,11 @@ export default function LogoSection({ onAnimationComplete }: LogoSectionProps) {
     const glow           = glowRef.current
     const tagline        = taglineRef.current
     const line           = lineRef.current
+    const navBar         = navBarRef.current
     const navLogo        = navLogoRef.current
     const logoContainer  = logoContainerRef.current
-    if (!overlay || layers.some((l) => !l) || !glow || !tagline || !line || !navLogo || !logoContainer) return
+    
+    if (!overlay || layers.some((l) => !l) || !glow || !tagline || !line || !navBar || !navLogo || !logoContainer) return
 
     layers.forEach((el) => {
       gsap.set(el, { opacity: 0, scale: 0.94, filter: 'blur(12px)' })
@@ -51,19 +54,16 @@ export default function LogoSection({ onAnimationComplete }: LogoSectionProps) {
     gsap.set(glow,    { opacity: 0, scale: 0.5 })
     gsap.set(tagline, { opacity: 0, y: 16 })
     gsap.set(line,    { scaleX: 0, opacity: 0 })
-    gsap.set(navLogo, { opacity: 0, x: -20, scale: 0.6 })
+    gsap.set(navBar,  { opacity: 0, y: -20 })
 
-    // Auto-playing timeline (no scroll trigger)
     const tl = gsap.timeline({
       onComplete: () => {
         onAnimationComplete?.()
 
-        // ── Fly-to-nav animation ──────────────────────────────────
         const logoRect = logoContainer.getBoundingClientRect()
         const navRect  = navLogo.getBoundingClientRect()
 
-        // 1. Set logo container to fixed at its exact current viewport position,
-        //    then move it outside the overlay so it survives the overlay fade-out.
+        // 1. Lock logo container position so it survives the overlay disappearing
         gsap.set(logoContainer, {
           position: 'fixed',
           top:      logoRect.top,
@@ -75,17 +75,21 @@ export default function LogoSection({ onAnimationComplete }: LogoSectionProps) {
         })
         document.body.appendChild(logoContainer)
 
-        // 2. Fade out decorative elements + overlay background
+        // 2. Fade out small decorative elements slightly faster
         gsap.to([glow, line, tagline], { opacity: 0, duration: 0.35, ease: 'power2.out' })
+        
+        // 3. Fade out overlay and reveal navbar perfectly in sync with the logo flying
         gsap.to(overlay, {
           opacity: 0,
           duration: 0.5,
-          delay: 0.1,
+          delay: 0.1, // Start 0.1s after the timeline completes
           ease: 'power2.inOut',
           onComplete: () => { overlay.style.display = 'none' },
         })
+        
+        gsap.to(navBar, { opacity: 1, y: 0, duration: 0.5, delay: 0.1, ease: 'power2.out' })
 
-        // 3. Brief pause then fly the logo to the nav position
+        // 4. Fly the logo (Synced delay: 0.1)
         const logoCx = logoRect.left + logoRect.width  / 2
         const logoCy = logoRect.top  + logoRect.height / 2
         const navCx  = navRect.left  + navRect.width   / 2
@@ -98,17 +102,17 @@ export default function LogoSection({ onAnimationComplete }: LogoSectionProps) {
           scale: flyScale,
           transformOrigin: '50% 50%',
           duration: 0.85,
-          delay: 0.45,
+          delay: 0.1, // CHANGED from 0.45: Now syncs perfectly with the overlay fade
           ease: 'power3.inOut',
           onComplete: () => {
-            // Snap the static nav logo in and remove the flying clone
-            gsap.set(navLogo, { opacity: 1, x: 0, scale: 1 })
+            gsap.set(navLogo, { opacity: 1 })
             logoContainer.style.display = 'none'
           },
         })
       },
     })
 
+    // --- Original Reveal Animations Below ---
     tl.to(glow, {
       opacity: 0.6, scale: 1.6,
       duration: 1.8, ease: 'power2.out',
@@ -180,37 +184,55 @@ export default function LogoSection({ onAnimationComplete }: LogoSectionProps) {
 
   return (
     <>
-      {/* Persistent navbar logo (fixed, top-left) */}
+      {/* Persistent Glassy Navbar */}
       <div
-        ref={navLogoRef}
-        aria-hidden
+        ref={navBarRef}
         style={{
           position: 'fixed',
-          top: '1.1rem',
-          left: '1.4rem',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '80px',
           zIndex: 100,
-          width: '52px',
           pointerEvents: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'rgba(7, 5, 10, 0.4)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderBottom: '1px solid rgba(222, 91, 234, 0.15)',
+          boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
         }}
       >
-        <div style={{ position: 'relative', width: '52px', aspectRatio: '997.05 / 892.10' }}>
-          {LAYERS.map((layer, i) => (
-            <img
-              key={layer.file}
-              src={`/${layer.file}`}
-              alt=""
-              style={{
-                position: i === 0 ? 'relative' : 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                display: 'block',
-                zIndex: STACK_Z[layer.file],
-                userSelect: 'none',
-              }}
-              draggable={false}
-            />
-          ))}
+        <div
+          ref={navLogoRef}
+          aria-hidden
+          style={{
+            position: 'relative',
+            width: '52px',
+            opacity: 0,
+          }}
+        >
+          <div style={{ position: 'relative', width: '100%', aspectRatio: '997.05 / 892.10' }}>
+            {LAYERS.map((layer, i) => (
+              <img
+                key={layer.file}
+                src={`/${layer.file}`}
+                alt=""
+                style={{
+                  position: i === 0 ? 'relative' : 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  display: 'block',
+                  zIndex: STACK_Z[layer.file],
+                  userSelect: 'none',
+                }}
+                draggable={false}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
