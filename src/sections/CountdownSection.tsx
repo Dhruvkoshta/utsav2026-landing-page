@@ -252,7 +252,7 @@ export default function CountdownSection({ sectionRef }: { sectionRef?: React.Re
           ref={logoContainerRef} 
           style={{ 
             position: 'relative', 
-            width: 'clamp(160px, 22vw, 320px)', 
+            width: 'clamp(280px, 22vw, 320px)', 
             marginBottom: '2rem',
             marginTop: '1.5rem',
             transform: 'translate(-0.5%, 10%)' // Kept your manual nudge!
@@ -260,7 +260,7 @@ export default function CountdownSection({ sectionRef }: { sectionRef?: React.Re
         >
           <img
             ref={logoRef}
-            src="/u26 final logo.webp"
+            src="/u26 final logo.png"
             alt="Utsav Logo"
             style={{
               width: '100%',
