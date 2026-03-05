@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import LogoSection from './sections/LogoSection'
 import CountdownSection from './sections/CountdownSection'
 import LightPillar from './components/LightPillar'
+import Navbar from './components/Navbar' // <-- Imported Navbar
 import './index.css'
 
 // Lazy-load below-fold sections to reduce initial bundle size
@@ -36,8 +37,12 @@ export default function App() {
       </div>
 
       <div style={{ position: 'relative', zIndex: 1 }}>
+        {/* Render the floating navbar here */}
+        <Navbar />
+
         <LogoSection />
         <CountdownSection />
+        
         <Suspense fallback={null}>
           <ThemeAboutSection />
         </Suspense>
