@@ -91,6 +91,7 @@ export default function GallerySection() {
           borderRadius={0.05}
           scrollSpeed={2}
           scrollEase={0.05}
+          autoScrollSpeed={0.03} // <-- Added control for auto rotation speed
         />
       </div>
     </section>

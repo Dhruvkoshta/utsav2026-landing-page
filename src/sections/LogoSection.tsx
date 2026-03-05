@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import gsap from 'gsap'
 
 interface LogoSectionProps {
@@ -32,9 +32,28 @@ export default function LogoSection({ onAnimationComplete }: LogoSectionProps) {
   const glowRef    = useRef<HTMLDivElement>(null)
   const taglineRef = useRef<HTMLParagraphElement>(null)
   const lineRef    = useRef<HTMLDivElement>(null)
-  const navBarRef  = useRef<HTMLDivElement>(null)
-  const navLogoRef = useRef<HTMLDivElement>(null)
   const logoContainerRef = useRef<HTMLDivElement>(null)
+
+  // State to track if the user has scrolled past the hero section
+  const [showNav, setShowNav] = useState(false)
+  // State for the "Dynamic Island" expansion
+  const [isIslandExpanded, setIsIslandExpanded] = useState(false)
+
+  // Scroll listener to toggle the floating navbar
+  useEffect(() => {
+    const handleScroll = () => {
+      // Toggle navbar visibility after scrolling down 90vh
+      if (window.scrollY > window.innerHeight * 0.9) {
+        setShowNav(true)
+      } else {
+        setShowNav(false)
+        setIsIslandExpanded(false) // Auto-collapse if we scroll back up
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   useEffect(() => {
     const overlay        = overlayRef.current
@@ -42,11 +61,8 @@ export default function LogoSection({ onAnimationComplete }: LogoSectionProps) {
     const glow           = glowRef.current
     const tagline        = taglineRef.current
     const line           = lineRef.current
-    const navBar         = navBarRef.current
-    const navLogo        = navLogoRef.current
     const logoContainer  = logoContainerRef.current
-    
-    if (!overlay || layers.some((l) => !l) || !glow || !tagline || !line || !navBar || !navLogo || !logoContainer) return
+    if (!overlay || layers.some((l) => !l) || !glow || !tagline || !line || !logoContainer) return
 
     layers.forEach((el) => {
       gsap.set(el, { opacity: 0, scale: 0.94, filter: 'blur(12px)' })
@@ -54,60 +70,30 @@ export default function LogoSection({ onAnimationComplete }: LogoSectionProps) {
     gsap.set(glow,    { opacity: 0, scale: 0.5 })
     gsap.set(tagline, { opacity: 0, y: 16 })
     gsap.set(line,    { scaleX: 0, opacity: 0 })
-    gsap.set(navBar,  { opacity: 0, y: -20 })
 
     const tl = gsap.timeline({
       onComplete: () => {
         onAnimationComplete?.()
 
-        const logoRect = logoContainer.getBoundingClientRect()
-        const navRect  = navLogo.getBoundingClientRect()
-
-        // 1. Lock logo container position so it survives the overlay disappearing
-        gsap.set(logoContainer, {
-          position: 'fixed',
-          top:      logoRect.top,
-          left:     logoRect.left,
-          width:    logoRect.width,
-          height:   logoRect.height,
-          zIndex:   200,
-          margin:   0,
-        })
-        document.body.appendChild(logoContainer)
-
-        // 2. Fade out small decorative elements slightly faster
+        // ── Smooth Outro Animation ──────────────────────────────────
+        // 1. Fade out decorative elements
         gsap.to([glow, line, tagline], { opacity: 0, duration: 0.35, ease: 'power2.out' })
         
-        // 3. Fade out overlay and reveal navbar perfectly in sync with the logo flying
+        // 2. Elegantly scale up and fade out the logo container
+        gsap.to(logoContainer, {
+          opacity: 0,
+          scale: 1.15,
+          duration: 0.6,
+          ease: 'power2.inOut',
+        })
+
+        // 3. Fade out the overlay background completely
         gsap.to(overlay, {
           opacity: 0,
           duration: 0.5,
-          delay: 0.1, // Start 0.1s after the timeline completes
+          delay: 0.2,
           ease: 'power2.inOut',
           onComplete: () => { overlay.style.display = 'none' },
-        })
-        
-        gsap.to(navBar, { opacity: 1, y: 0, duration: 0.5, delay: 0.1, ease: 'power2.out' })
-
-        // 4. Fly the logo (Synced delay: 0.1)
-        const logoCx = logoRect.left + logoRect.width  / 2
-        const logoCy = logoRect.top  + logoRect.height / 2
-        const navCx  = navRect.left  + navRect.width   / 2
-        const navCy  = navRect.top   + navRect.height  / 2
-        const flyScale = navRect.width / logoRect.width
-
-        gsap.to(logoContainer, {
-          x: navCx - logoCx,
-          y: navCy - logoCy,
-          scale: flyScale,
-          transformOrigin: '50% 50%',
-          duration: 0.85,
-          delay: 0.1, // CHANGED from 0.45: Now syncs perfectly with the overlay fade
-          ease: 'power3.inOut',
-          onComplete: () => {
-            gsap.set(navLogo, { opacity: 1 })
-            logoContainer.style.display = 'none'
-          },
         })
       },
     })
@@ -184,57 +170,100 @@ export default function LogoSection({ onAnimationComplete }: LogoSectionProps) {
 
   return (
     <>
-      {/* Persistent Glassy Navbar */}
-      <div
-        ref={navBarRef}
+      {/* Floating "Dynamic Island" Navbar 
+        Expands from a small pill to a full navbar on hover/click 
+      */}
+      <nav
+        onMouseEnter={() => setIsIslandExpanded(true)}
+        onMouseLeave={() => setIsIslandExpanded(false)}
+        onClick={() => setIsIslandExpanded(!isIslandExpanded)} // For touch devices
         style={{
           position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '80px',
+          top: '2rem',
+          left: '50%',
+          // Slide down when showNav is true. The X-translation keeps it perfectly centered even as width changes.
+          transform: `translateX(-50%) translateY(${showNav ? '0' : '-150%'})`,
+          opacity: showNav ? 1 : 0,
+          
+          // DYNAMIC ISLAND SIZING
+          // 58px = collapsed pill (just enough for the 42px logo + padding). 
+          // 320px = expanded state (adjust this if you add/remove links).
+          width: isIslandExpanded ? '320px' : '58px',
+          height: '58px',
+          
           zIndex: 100,
-          pointerEvents: 'none',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          background: 'rgba(7, 5, 10, 0.4)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          borderBottom: '1px solid rgba(222, 91, 234, 0.15)',
-          boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
+          padding: '0.5rem', // Equal padding to form a perfect circle when collapsed
+          borderRadius: '9999px',
+          background: 'rgba(20, 10, 30, 0.45)', 
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: isIslandExpanded 
+            ? '0 20px 50px rgba(0, 0, 0, 0.4)' 
+            : '0 10px 30px rgba(0, 0, 0, 0.2)',
+          cursor: isIslandExpanded ? 'default' : 'pointer',
+          pointerEvents: showNav ? 'auto' : 'none',
+          overflow: 'hidden', // Crucial to hide links when collapsed
+
+          // The signature Apple springy animation curve
+          transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease',
         }}
       >
-        <div
-          ref={navLogoRef}
-          aria-hidden
-          style={{
-            position: 'relative',
-            width: '52px',
-            opacity: 0,
-          }}
-        >
-          <div style={{ position: 'relative', width: '100%', aspectRatio: '997.05 / 892.10' }}>
-            {LAYERS.map((layer, i) => (
-              <img
-                key={layer.file}
-                src={`/${layer.file}`}
-                alt=""
-                style={{
-                  position: i === 0 ? 'relative' : 'absolute',
-                  inset: 0,
-                  width: '100%',
-                  height: '100%',
-                  display: 'block',
-                  zIndex: STACK_Z[layer.file],
-                  userSelect: 'none',
-                }}
-                draggable={false}
-              />
-            ))}
-          </div>
+        {/* Small Logo embedded in the Navbar */}
+        <div style={{ 
+          position: 'relative', 
+          minWidth: '42px', 
+          height: '42px',
+          aspectRatio: '997.05 / 892.10',
+          marginLeft: '0.1rem', // Slight visual centering tweak inside the pill
+          transition: 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          transform: isIslandExpanded ? 'scale(0.9)' : 'scale(1)', // slight shrink when expanded
+        }}>
+          {LAYERS.map((layer, i) => (
+            <img
+              key={`nav-${layer.file}`}
+              src={`/${layer.file}`}
+              alt=""
+              style={{
+                position: i === 0 ? 'relative' : 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                display: 'block',
+                zIndex: STACK_Z[layer.file],
+                userSelect: 'none',
+              }}
+              draggable={false}
+            />
+          ))}
         </div>
-      </div>
+
+        {/* Nav Links */}
+        <div style={{
+          display: 'flex',
+          gap: '1.8rem',
+          marginLeft: '1.5rem', // Space between logo and links
+          whiteSpace: 'nowrap', // Prevent links from wrapping during the animation
+          fontFamily: '"Inter", sans-serif',
+          fontSize: '0.85rem',
+          fontWeight: 500,
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase',
+          color: 'rgba(255, 255, 255, 0.85)',
+          
+          // Animate the links fading in and sliding slightly
+          opacity: isIslandExpanded ? 1 : 0,
+          transform: isIslandExpanded ? 'translateX(0)' : 'translateX(-20px)',
+          transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          transitionDelay: isIslandExpanded ? '0.1s' : '0s', // Delay fade-in slightly so the island opens first
+        }}>
+          <a href="#about" className="hover:text-white transition-colors" style={{ textDecoration: 'none', color: 'inherit' }}>About</a>
+          <a href="#events" className="hover:text-white transition-colors" style={{ textDecoration: 'none', color: 'inherit' }}>Events</a>
+          <a href="#gallery" className="hover:text-white transition-colors" style={{ textDecoration: 'none', color: 'inherit' }}>Gallery</a>
+        </div>
+      </nav>
 
       {/* Loading overlay */}
       <div
@@ -275,12 +304,11 @@ export default function LogoSection({ onAnimationComplete }: LogoSectionProps) {
 
         <div
           ref={logoContainerRef}
-          style={
-          {
-          position: 'relative',
-          zIndex: 2,
-          width: 'min(70vmin, 500px)',
-          aspectRatio: '997.05 / 892.10',
+          style={{
+            position: 'relative',
+            zIndex: 2,
+            width: 'min(70vmin, 500px)',
+            aspectRatio: '997.05 / 892.10',
           }}>
           {LAYERS.map((layer, i) => (
             <img

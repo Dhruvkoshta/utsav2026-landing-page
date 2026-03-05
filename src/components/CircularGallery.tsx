@@ -182,6 +182,8 @@ class Media {
   speed: number = 0;
   isBefore: boolean = false;
   isAfter: boolean = false;
+  isLoaded: boolean = false;
+  isVisible: boolean = false;
 
   constructor({
     geometry,
@@ -221,13 +223,15 @@ class Media {
 
   createShader() {
     const texture = new Texture(this.gl, {
-      generateMipmaps: true
+      generateMipmaps: false,
+      minFilter: this.gl.LINEAR,
+      magFilter: this.gl.LINEAR
     });
     this.program = new Program(this.gl, {
       depthTest: false,
       depthWrite: false,
       vertex: `
-        precision highp float;
+        precision mediump float;
         attribute vec3 position;
         attribute vec2 uv;
         uniform mat4 modelViewMatrix;
@@ -238,16 +242,17 @@ class Media {
         void main() {
           vUv = uv;
           vec3 p = position;
-          p.z = (sin(p.x * 4.0 + uTime) * 1.5 + cos(p.y * 2.0 + uTime) * 1.5) * (0.1 + uSpeed * 0.5);
+          p.z = (sin(p.x * 4.0 + uTime) * 1.5 + cos(p.y * 2.0 + uTime) * 1.5) * (0.02 + uSpeed * 0.2);
           gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
         }
       `,
       fragment: `
-        precision highp float;
+        precision mediump float;
         uniform vec2 uImageSizes;
         uniform vec2 uPlaneSizes;
         uniform sampler2D tMap;
         uniform float uBorderRadius;
+        uniform float uAlpha;
         varying vec2 vUv;
         
         float roundedBoxSDF(vec2 p, vec2 b, float r) {
@@ -268,9 +273,8 @@ class Media {
           
           float d = roundedBoxSDF(vUv - 0.5, vec2(0.5 - uBorderRadius), uBorderRadius);
           
-          // Smooth antialiasing for edges
-          float edgeSmooth = 0.002;
-          float alpha = 1.0 - smoothstep(-edgeSmooth, edgeSmooth, d);
+          float edgeSmooth = 0.005;
+          float alpha = (1.0 - smoothstep(-edgeSmooth, edgeSmooth, d)) * uAlpha;
           
           gl_FragColor = vec4(color.rgb, alpha);
         }
@@ -281,16 +285,23 @@ class Media {
         uImageSizes: { value: [0, 0] },
         uSpeed: { value: 0 },
         uTime: { value: 100 * Math.random() },
-        uBorderRadius: { value: this.borderRadius }
+        uBorderRadius: { value: this.borderRadius },
+        uAlpha: { value: 0 }
       },
       transparent: true
     });
+  }
+
+  loadTexture() {
+    if (this.isLoaded) return;
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.src = this.image;
     img.onload = () => {
-      texture.image = img;
+      this.program.uniforms.tMap.value.image = img;
       this.program.uniforms.uImageSizes.value = [img.naturalWidth, img.naturalHeight];
+      this.isLoaded = true;
+      this.program.uniforms.uAlpha.value = 1;
     };
   }
 
@@ -313,7 +324,7 @@ class Media {
     });
   }
 
-  update(scroll: { current: number; last: number }, direction: 'right' | 'left') {
+  update(scroll: { current: number; last: number }, direction: 'right' | 'left', deltaTime: number = 16.66) {
     this.plane.position.x = this.x - scroll.current - this.extra;
 
     const x = this.plane.position.x;
@@ -338,13 +349,30 @@ class Media {
     }
 
     this.speed = scroll.current - scroll.last;
-    this.program.uniforms.uTime.value += 0.04;
-    this.program.uniforms.uSpeed.value = this.speed;
+    
+    this.program.uniforms.uTime.value += 0.01 * (deltaTime / 16.66); 
+    this.program.uniforms.uSpeed.value = lerp(this.program.uniforms.uSpeed.value, this.speed, 0.1);
 
     const planeOffset = this.plane.scale.x / 2;
     const viewportOffset = this.viewport.width / 2;
     this.isBefore = this.plane.position.x + planeOffset < -viewportOffset;
     this.isAfter = this.plane.position.x - planeOffset > viewportOffset;
+
+    if (Math.abs(this.plane.position.x) < viewportOffset * 3) {
+      this.loadTexture();
+      this.isVisible = true;
+    } else {
+      this.isVisible = false;
+    }
+
+    if (this.isVisible) {
+      this.plane.visible = true;
+      if (this.title && this.title.mesh) this.title.mesh.visible = true;
+    } else {
+      this.plane.visible = false;
+      if (this.title && this.title.mesh) this.title.mesh.visible = false;
+    }
+
     if (direction === 'right' && this.isBefore) {
       this.extra -= this.widthTotal;
       this.isBefore = this.isAfter = false;
@@ -382,6 +410,7 @@ interface AppConfig {
   font?: string;
   scrollSpeed?: number;
   scrollEase?: number;
+  autoScrollSpeed?: number;
 }
 
 class App {
@@ -405,15 +434,24 @@ class App {
   screen!: { width: number; height: number };
   viewport!: { width: number; height: number };
   raf: number = 0;
-
+  lastTime: number = 0;
+  
+  boundUpdate: (time: number) => void;
   boundOnResize!: () => void;
   boundOnWheel!: (e: Event) => void;
   boundOnTouchDown!: (e: MouseEvent | TouchEvent) => void;
   boundOnTouchMove!: (e: MouseEvent | TouchEvent) => void;
   boundOnTouchUp!: () => void;
+  boundOnMouseEnter!: () => void;
+  boundOnMouseLeave!: () => void;
 
   isDown: boolean = false;
   start: number = 0;
+  isHovering: boolean = false;
+  
+  autoScrollSpeed: number; 
+  // State tracking the current auto-scroll velocity for smooth ramping
+  currentAutoScrollVelocity: number = 0; 
 
   constructor(
     container: HTMLElement,
@@ -424,22 +462,28 @@ class App {
       borderRadius = 0,
       font = 'bold 30px Figtree',
       scrollSpeed = 2,
-      scrollEase = 0.05
+      scrollEase = 0.05,
+      autoScrollSpeed = 0.05
     }: AppConfig
   ) {
     document.documentElement.classList.remove('no-js');
     this.container = container;
     this.scrollSpeed = scrollSpeed;
+    this.autoScrollSpeed = autoScrollSpeed;
     this.scroll = { ease: scrollEase, current: 0, target: 0, last: 0 };
     this.onCheckDebounce = debounce(this.onCheck.bind(this), 200);
+    
+    this.boundUpdate = this.update.bind(this);
+    
     this.createRenderer();
     this.createCamera();
     this.createScene();
     this.onResize();
     this.createGeometry();
     this.createMedias(items, bend, textColor, borderRadius, font);
-    this.update();
     this.addEventListeners();
+    
+    this.raf = window.requestAnimationFrame(this.boundUpdate);
   }
 
   createRenderer() {
@@ -465,8 +509,8 @@ class App {
 
   createGeometry() {
     this.planeGeometry = new Plane(this.gl, {
-      heightSegments: 50,
-      widthSegments: 100
+      heightSegments: 20,
+      widthSegments: 40
     });
   }
 
@@ -478,50 +522,17 @@ class App {
     font: string
   ) {
     const defaultItems = [
-      {
-        image: '/gallery/img1.webp',
-        text: ''
-      },
-      {
-        image: '/gallery/img2.webp',
-        text: ''
-      },
-      {
-        image: '/gallery/img3.webp',
-        text: 'Waterfall'
-      },
-      {
-        image: '/gallery/img4.webp',
-        text: 'Strawberries'
-      },
-      {
-        image: '/gallery/img5.webp',
-        text: 'Deep Diving'
-      },
-      {
-        image: '/gallery/img6.webp',
-        text: 'Train Track'
-      },
-      {
-        image: '/gallery/img7.webp',
-        text: 'Santorini'
-      },
-      {
-        image: '/gallery/img8.webp',
-        text: 'Blurry Lights'
-      },
-      {
-        image: '/gallery/img9.webp',
-        text: 'New York'
-      },
-      {
-        image: '/gallery/img10.webp',
-        text: 'Good Boy'
-      },
-      {
-        image: '/gallery/img11.webp',
-        text: 'Coastline'
-      }
+      { image: '/gallery/img1.webp', text: '' },
+      { image: '/gallery/img2.webp', text: '' },
+      { image: '/gallery/img3.webp', text: 'Waterfall' },
+      { image: '/gallery/img4.webp', text: 'Strawberries' },
+      { image: '/gallery/img5.webp', text: 'Deep Diving' },
+      { image: '/gallery/img6.webp', text: 'Train Track' },
+      { image: '/gallery/img7.webp', text: 'Santorini' },
+      { image: '/gallery/img8.webp', text: 'Blurry Lights' },
+      { image: '/gallery/img9.webp', text: 'New York' },
+      { image: '/gallery/img10.webp', text: 'Good Boy' },
+      { image: '/gallery/img11.webp', text: 'Coastline' }
     ];
     const galleryItems = items && items.length ? items : defaultItems;
     this.mediasImages = galleryItems.concat(galleryItems);
@@ -563,10 +574,20 @@ class App {
     this.onCheck();
   }
 
+  onMouseEnter() {
+    this.isHovering = true;
+  }
+
+  onMouseLeave() {
+    this.isHovering = false;
+  }
+
   onWheel(e: Event) {
     const wheelEvent = e as WheelEvent & { wheelDelta?: number; detail?: number };
     const delta = wheelEvent.deltaY || wheelEvent.wheelDelta || wheelEvent.detail || 0;
-    this.scroll.target += (delta > 0 ? this.scrollSpeed : -this.scrollSpeed) * 0.2;
+    
+    const normalizedDelta = Math.sign(delta) * Math.min(Math.abs(delta), 100);
+    this.scroll.target += (normalizedDelta > 0 ? this.scrollSpeed : -this.scrollSpeed) * 0.15;
     this.onCheckDebounce();
   }
 
@@ -596,15 +617,44 @@ class App {
     }
   }
 
-  update() {
-    this.scroll.current = lerp(this.scroll.current, this.scroll.target, this.scroll.ease);
-    const direction = this.scroll.current > this.scroll.last ? 'right' : 'left';
-    if (this.medias) {
-      this.medias.forEach(media => media.update(this.scroll, direction));
+  update(time: number) {
+    if (!this.lastTime) this.lastTime = time;
+    const deltaTime = time - this.lastTime || 16.66;
+    this.lastTime = time;
+
+    const rect = this.container.getBoundingClientRect();
+    const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+    
+    if (isVisible) {
+      // Manage Auto-scroll Velocity
+      if (!this.isHovering && !this.isDown) {
+        // Linearly ramp up to the target autoScrollSpeed over ~1 second (assuming 60fps)
+        // 0.05 lerp achieves ~95% of target speed in about 60 frames.
+        this.currentAutoScrollVelocity = lerp(
+          this.currentAutoScrollVelocity, 
+          this.autoScrollSpeed, 
+          0.05
+        );
+      } else {
+        // Immediately drop velocity to 0 when user interacts
+        this.currentAutoScrollVelocity = 0;
+      }
+
+      // Apply the smoothly ramped velocity to our target position
+      this.scroll.target += this.currentAutoScrollVelocity * (deltaTime / 16.66);
+
+      // Interpolate current scroll towards the target
+      this.scroll.current = lerp(this.scroll.current, this.scroll.target, this.scroll.ease);
+
+      const direction = this.scroll.current > this.scroll.last ? 'right' : 'left';
+      if (this.medias) {
+        this.medias.forEach(media => media.update(this.scroll, direction, deltaTime));
+      }
+      this.renderer.render({ scene: this.scene, camera: this.camera });
+      this.scroll.last = this.scroll.current;
     }
-    this.renderer.render({ scene: this.scene, camera: this.camera });
-    this.scroll.last = this.scroll.current;
-    this.raf = window.requestAnimationFrame(this.update.bind(this));
+    
+    this.raf = window.requestAnimationFrame(this.boundUpdate);
   }
 
   addEventListeners() {
@@ -613,15 +663,20 @@ class App {
     this.boundOnTouchDown = this.onTouchDown.bind(this);
     this.boundOnTouchMove = this.onTouchMove.bind(this);
     this.boundOnTouchUp = this.onTouchUp.bind(this);
+    this.boundOnMouseEnter = this.onMouseEnter.bind(this);
+    this.boundOnMouseLeave = this.onMouseLeave.bind(this);
+    
     window.addEventListener('resize', this.boundOnResize);
-    window.addEventListener('mousewheel', this.boundOnWheel);
-    window.addEventListener('wheel', this.boundOnWheel);
+    window.addEventListener('mousewheel', this.boundOnWheel, { passive: true });
+    window.addEventListener('wheel', this.boundOnWheel, { passive: true });
     window.addEventListener('mousedown', this.boundOnTouchDown);
     window.addEventListener('mousemove', this.boundOnTouchMove);
     window.addEventListener('mouseup', this.boundOnTouchUp);
-    window.addEventListener('touchstart', this.boundOnTouchDown);
-    window.addEventListener('touchmove', this.boundOnTouchMove);
+    window.addEventListener('touchstart', this.boundOnTouchDown, { passive: true });
+    window.addEventListener('touchmove', this.boundOnTouchMove, { passive: true });
     window.addEventListener('touchend', this.boundOnTouchUp);
+    this.container.addEventListener('mouseenter', this.boundOnMouseEnter);
+    this.container.addEventListener('mouseleave', this.boundOnMouseLeave);
   }
 
   destroy() {
@@ -635,6 +690,8 @@ class App {
     window.removeEventListener('touchstart', this.boundOnTouchDown);
     window.removeEventListener('touchmove', this.boundOnTouchMove);
     window.removeEventListener('touchend', this.boundOnTouchUp);
+    this.container.removeEventListener('mouseenter', this.boundOnMouseEnter);
+    this.container.removeEventListener('mouseleave', this.boundOnMouseLeave);
     if (this.renderer && this.renderer.gl && this.renderer.gl.canvas.parentNode) {
       this.renderer.gl.canvas.parentNode.removeChild(this.renderer.gl.canvas as HTMLCanvasElement);
     }
@@ -649,6 +706,7 @@ interface CircularGalleryProps {
   font?: string;
   scrollSpeed?: number;
   scrollEase?: number;
+  autoScrollSpeed?: number;
 }
 
 export default function CircularGallery({
@@ -658,7 +716,8 @@ export default function CircularGallery({
   borderRadius = 0.05,
   font = 'bold 30px Figtree',
   scrollSpeed = 2,
-  scrollEase = 0.05
+  scrollEase = 0.05,
+  autoScrollSpeed = 0.03
 }: CircularGalleryProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -670,11 +729,12 @@ export default function CircularGallery({
       borderRadius,
       font,
       scrollSpeed,
-      scrollEase
+      scrollEase,
+      autoScrollSpeed
     });
     return () => {
       app.destroy();
     };
-  }, [items, bend, textColor, borderRadius, font, scrollSpeed, scrollEase]);
+  }, [items, bend, textColor, borderRadius, font, scrollSpeed, scrollEase, autoScrollSpeed]);
   return <div className="w-full h-full overflow-hidden cursor-grab active:cursor-grabbing" ref={containerRef} />;
 }
