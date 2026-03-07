@@ -138,10 +138,18 @@ interface Viewport {
   height: number;
 }
 
+interface TextureCacheEntry {
+  texture: Texture;
+  loaded: boolean;
+  width: number;
+  height: number;
+}
+
 interface MediaProps {
   geometry: Plane;
   gl: GL;
   image: string;
+  textureEntry: TextureCacheEntry;
   index: number;
   length: number;
   renderer: Renderer;
@@ -171,6 +179,7 @@ class Media {
   textColor: string;
   borderRadius: number;
   font?: string;
+  textureEntry!: TextureCacheEntry;
   program!: Program;
   plane!: Mesh;
   title!: Title;
@@ -190,6 +199,7 @@ class Media {
     geometry,
     gl,
     image,
+    textureEntry,
     index,
     length,
     renderer,
@@ -205,6 +215,7 @@ class Media {
     this.geometry = geometry;
     this.gl = gl;
     this.image = image;
+    this.textureEntry = textureEntry;
     this.index = index;
     this.length = length;
     this.renderer = renderer;
@@ -224,11 +235,6 @@ class Media {
   }
 
   createShader() {
-    const texture = new Texture(this.gl, {
-      generateMipmaps: false, // Disabling mipmaps for less GPU memory
-      minFilter: this.gl.LINEAR,
-      magFilter: this.gl.LINEAR
-    });
     this.program = new Program(this.gl, {
       depthTest: false,
       depthWrite: false,
@@ -283,7 +289,7 @@ class Media {
         }
       `,
       uniforms: {
-        tMap: { value: texture },
+        tMap: { value: this.textureEntry.texture },
         uPlaneSizes: { value: [0, 0] },
         uImageSizes: { value: [0, 0] },
         uSpeed: { value: 0 },
@@ -296,17 +302,11 @@ class Media {
   }
 
   loadTexture() {
-    if (this.isLoaded) return;
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = this.image;
-    img.onload = () => {
-      this.program.uniforms.tMap.value.image = img;
-      this.program.uniforms.uImageSizes.value = [img.naturalWidth, img.naturalHeight];
-      this.isLoaded = true;
-      // Simple fade in
-      this.program.uniforms.uAlpha.value = 1;
-    };
+    if (this.isLoaded || !this.textureEntry.loaded) return;
+    this.program.uniforms.uImageSizes.value = [this.textureEntry.width, this.textureEntry.height];
+    this.isLoaded = true;
+    // Simple fade in
+    this.program.uniforms.uAlpha.value = 1;
   }
 
   createMesh() {
@@ -418,6 +418,54 @@ interface AppConfig {
 
 class App {
   container: HTMLElement;
+  textureCache: Map<string, TextureCacheEntry> = new Map();
+
+  getTexture(imageSrc: string): TextureCacheEntry {
+    if (this.textureCache.has(imageSrc)) {
+      return this.textureCache.get(imageSrc)!;
+    }
+
+    const texture = new Texture(this.gl, {
+      generateMipmaps: false,
+      minFilter: this.gl.LINEAR,
+      magFilter: this.gl.LINEAR
+    });
+
+    const entry: TextureCacheEntry = {
+      texture,
+      loaded: false,
+      width: 0,
+      height: 0
+    };
+
+    this.textureCache.set(imageSrc, entry);
+
+    fetch(imageSrc)
+      .then(res => res.blob())
+      .then(blob => createImageBitmap(blob, { imageOrientation: 'flipY' }))
+      .then(bitmap => {
+        entry.texture.image = bitmap as unknown as HTMLImageElement;
+        entry.texture.needsUpdate = true;
+        entry.width = bitmap.width;
+        entry.height = bitmap.height;
+        entry.loaded = true;
+      })
+      .catch(() => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = imageSrc;
+        img.onload = () => {
+          entry.texture.image = img;
+          entry.texture.needsUpdate = true;
+          entry.width = img.naturalWidth;
+          entry.height = img.naturalHeight;
+          entry.loaded = true;
+        };
+      });
+
+    return entry;
+  }
+
   scrollSpeed: number;
   scroll: {
     ease: number;
@@ -581,6 +629,7 @@ class App {
         geometry: this.planeGeometry,
         gl: this.gl,
         image: data.image,
+        textureEntry: this.getTexture(data.image),
         index,
         length: this.mediasImages.length,
         renderer: this.renderer,
